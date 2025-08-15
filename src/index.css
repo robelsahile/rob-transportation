@@ -1,0 +1,5 @@
+/* Using TailwindCSS via CDN, so this file can be mostly empty. 
+   It's here as a placeholder for any future global styles and to satisfy the import in index.tsx */
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
