@@ -1,23 +1,29 @@
-import React from 'react';
-import { BookingData, VehicleOption } from '../../types';
-import TextInput from './TextInput';
-import DateTimePicker from './DateTimePicker';
+/// <reference types="google.maps" />
+
+import React, { useEffect } from "react";
+import { BookingData, VehicleOption } from "../../types";
+import TextInput from "./TextInput";
+import DateTimePicker from "./DateTimePicker";
 import VehicleSelector from "./VehicleSelector";
 import Button from "./Button";
-
+import { loadGoogleMaps } from "../lib/googleMaps"; // <-- note: ../lib (NOT ../../lib)
 
 interface BookingFormProps {
-  bookingDetails: Omit<BookingData, 'id' | 'created_at'>;
+  bookingDetails: Omit<BookingData, "id" | "created_at">;
   onInputChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => void;
   onVehicleSelect: (vehicle: VehicleOption) => void;
   onSubmit: () => void;
   vehicleOptions: VehicleOption[];
 }
 
-// Placeholder icons (simple SVG paths)
+// Icons (same as your originals)
 const LocationMarkerIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" {...props}>
-    <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
+    <path
+      fillRule="evenodd"
+      d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z"
+      clipRule="evenodd"
+    />
   </svg>
 );
 const UserIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
@@ -36,12 +42,65 @@ const EnvelopeIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
   </svg>
 );
 
-const BookingForm: React.FC<BookingFormProps> = ({ bookingDetails, onInputChange, onVehicleSelect, onSubmit, vehicleOptions }) => {
+const BookingForm: React.FC<BookingFormProps> = ({
+  bookingDetails,
+  onInputChange,
+  onVehicleSelect,
+  onSubmit,
+  vehicleOptions,
+}) => {
+  useEffect(() => {
+    const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string | undefined;
+    if (!apiKey) {
+      console.error("Google Maps API key missing. Put it in .env.local as VITE_GOOGLE_MAPS_API_KEY");
+      return;
+    }
+
+    loadGoogleMaps(apiKey).then(() => {
+      // Find the text inputs by their 'name' attribute (your TextInput forwards name to <input/>)
+      const pickupInput = document.querySelector<HTMLInputElement>("input[name='pickupLocation']");
+      const dropoffInput = document.querySelector<HTMLInputElement>("input[name='dropoffLocation']");
+
+      if (pickupInput) {
+        const pickupAutocomplete = new google.maps.places.Autocomplete(pickupInput, {
+          fields: ["formatted_address", "geometry", "name"],
+          // componentRestrictions: { country: "us" }, // optional
+        });
+        pickupAutocomplete.addListener("place_changed", () => {
+          const place = pickupAutocomplete.getPlace();
+          const value = place.formatted_address || place.name || pickupInput.value;
+          const evt = { target: { name: "pickupLocation", value } } as React.ChangeEvent<HTMLInputElement>;
+          onInputChange(evt);
+        });
+      }
+
+      if (dropoffInput) {
+        const dropoffAutocomplete = new google.maps.places.Autocomplete(dropoffInput, {
+          fields: ["formatted_address", "geometry", "name"],
+          // componentRestrictions: { country: "us" },
+        });
+        dropoffAutocomplete.addListener("place_changed", () => {
+          const place = dropoffAutocomplete.getPlace();
+          const value = place.formatted_address || place.name || dropoffInput.value;
+          const evt = { target: { name: "dropoffLocation", value } } as React.ChangeEvent<HTMLInputElement>;
+          onInputChange(evt);
+        });
+      }
+    });
+  }, [onInputChange]);
+
   return (
     <div className="bg-brand-surface p-6 sm:p-8 rounded-lg shadow-xl">
-      <h2 className="text-2xl font-semibold text-brand-text mb-6 border-b pb-3 border-slate-200">Book Your Ride</h2>
-      
-      <form onSubmit={(e) => { e.preventDefault(); onSubmit(); }}>
+      <h2 className="text-2xl font-semibold text-brand-text mb-6 border-b pb-3 border-slate-200">
+        Book Your Ride
+      </h2>
+
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          onSubmit();
+        }}
+      >
         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6">
           <TextInput
             label="Pickup Location"
@@ -77,7 +136,9 @@ const BookingForm: React.FC<BookingFormProps> = ({ bookingDetails, onInputChange
           onSelect={onVehicleSelect}
         />
 
-        <h3 className="text-lg font-medium text-brand-text-light mb-3 pt-4 border-t border-slate-200">Your Details</h3>
+        <h3 className="text-lg font-medium text-brand-text-light mb-3 pt-4 border-t border-slate-200">
+          Your Details
+        </h3>
         <TextInput
           label="Full Name"
           name="name"
