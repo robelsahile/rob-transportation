@@ -21,6 +21,24 @@ const handleNavigateToAdmin = () => {
   alert('Admin view not implemented yet'); // placeholder
 };
 
+// ✅ Helper: Check if address is in Washington State
+function isWashingtonAddress(address: string) {
+  if (!address) return false;
+  const a = address.toLowerCase();
+
+  const hasWA =
+    a.includes(', wa') ||
+    a.endsWith(' wa') ||
+    a.includes(', wa ') ||
+    a.includes(' wa,');
+  const hasWashingtonWord = a.includes(' washington');
+
+  // avoid Washington DC false positives
+  const isDC = a.includes('washington, dc') || a.includes(' dc');
+
+  return (hasWA || hasWashingtonWord) && !isDC;
+}
+
 const App: React.FC = () => {
   const [bookingDetails, setBookingDetails] = useState<BookingFormData>(initialBookingData);
   
@@ -34,23 +52,26 @@ const App: React.FC = () => {
   }, []);
 
   const handleSubmit = () => {
-    // In this simplified version, we just validate and show an alert.
     const { pickupLocation, dropoffLocation, dateTime, vehicleType, name, phone, email } = bookingDetails;
+    
     if (!pickupLocation || !dropoffLocation || !dateTime || !vehicleType || !name || !phone || !email) {
       alert("Please fill in all required fields.");
       return;
     }
-    if (!pickupLocation.toLowerCase().includes('seattle')) {
-      alert("Pickup service is currently available only in the Seattle area. Please enter a valid Seattle location.");
+
+    // ✅ Changed from "Seattle only" to "Washington State"
+    if (!isWashingtonAddress(pickupLocation)) {
+      alert("Pickup service is available only within Washington State. Please enter a valid WA location.");
       return;
     }
+
     if (!/\S+@\S+\.\S+/.test(email)) {
-        alert("Please enter a valid email address.");
-        return;
+      alert("Please enter a valid email address.");
+      return;
     }
     if (!/^\+?[0-9\s-]{10,}$/.test(phone)) {
-        alert("Please enter a valid phone number.");
-        return;
+      alert("Please enter a valid phone number.");
+      return;
     }
     
     alert("Thank you for your interest! This is a demonstration and booking submission is not active.");
@@ -69,7 +90,6 @@ const App: React.FC = () => {
         />
       </main>
       <Footer onNavigateToAdmin={handleNavigateToAdmin} />
-
     </div>
   );
 };

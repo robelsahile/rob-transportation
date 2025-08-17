@@ -107,7 +107,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
             name="pickupLocation"
             value={bookingDetails.pickupLocation}
             onChange={onInputChange}
-            placeholder="e.g., Space Needle, Seattle, WA"
+            placeholder="e.g., SeaTac International Airport"
             required
             Icon={LocationMarkerIcon}
           />
@@ -116,7 +116,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
             name="dropoffLocation"
             value={bookingDetails.dropoffLocation}
             onChange={onInputChange}
-            placeholder="e.g., 123 Main St, Bellevue"
+            placeholder="e.g., Space Needle, Seattle, WA"
             required
             Icon={LocationMarkerIcon}
           />
