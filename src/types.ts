@@ -1,7 +1,8 @@
+// src/types.ts
 export enum VehicleType {
-  SEDAN = 'Luxury Sedan',
-  SUV = 'Premium SUV',
-  VAN = 'Executive Van',
+  SEDAN = 'SEDAN',
+  SUV = 'SUV',
+  VAN = 'VAN',
 }
 
 export interface VehicleOption {
@@ -12,8 +13,10 @@ export interface VehicleOption {
   image: string;
 }
 
-// Represents the data captured by the form in the simplified app
-export interface BookingFormData {
+// Full booking record (if you ever store it)
+export interface BookingData {
+  id: string;
+  created_at: string;
   pickupLocation: string;
   dropoffLocation: string;
   dateTime: string;
@@ -21,4 +24,8 @@ export interface BookingFormData {
   name: string;
   phone: string;
   email: string;
+  flightNumber?: string; // optional
 }
+
+// 👇 Use this for the form everywhere
+export type BookingFormData = Omit<BookingData, 'id' | 'created_at'>;

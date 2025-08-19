@@ -1,22 +1,23 @@
 /// <reference types="google.maps" />
 
 import React, { useEffect } from "react";
-import { BookingData, VehicleOption } from "../../types";
+import { BookingData as BookingFormData, VehicleOption } from "../../types"; // ✅ use BookingData
 import TextInput from "./TextInput";
 import DateTimePicker from "./DateTimePicker";
 import VehicleSelector from "./VehicleSelector";
 import Button from "./Button";
-import { loadGoogleMaps } from "../lib/googleMaps"; // <-- note: ../lib (NOT ../../lib)
+import { loadGoogleMaps } from "../lib/googleMaps";
 
 interface BookingFormProps {
-  bookingDetails: Omit<BookingData, "id" | "created_at">;
+  bookingDetails: BookingFormData; // ✅ not Omit<...>
   onInputChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => void;
   onVehicleSelect: (vehicle: VehicleOption) => void;
   onSubmit: () => void;
   vehicleOptions: VehicleOption[];
 }
 
-// Icons (same as your originals)
+
+// Icons
 const LocationMarkerIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" {...props}>
     <path
@@ -41,6 +42,12 @@ const EnvelopeIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
     <path d="M2.003 5.884L10 11.884l7.997-6M2 12h.01M2 15h.01M4 15h.01M6 15h.01M8 15h.01M10 15h.01M12 15h.01M14 15h.01M16 15h.01M18 15h.01M20 15h.01M2.992 18h14.016a2 2 0 002-2V6a2 2 0 00-2-2H2.992a2 2 0 00-2 2v10a2 2 0 002 2z" />
   </svg>
 );
+// NEW: Plane icon for Flight Number
+const PlaneIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" {...props}>
+    <path d="M10.18 4.02l6.6 5.11a1 1 0 01-.42 1.76l-3.5.9-1.3 3.25a1 1 0 01-1.86-.02l-1.2-3.1-3.62-.93a1 1 0 01-.3-1.78l6.6-5.19a1 1 0 011.1 0z" />
+  </svg>
+);
 
 const BookingForm: React.FC<BookingFormProps> = ({
   bookingDetails,
@@ -57,14 +64,12 @@ const BookingForm: React.FC<BookingFormProps> = ({
     }
 
     loadGoogleMaps(apiKey).then(() => {
-      // Find the text inputs by their 'name' attribute (your TextInput forwards name to <input/>)
       const pickupInput = document.querySelector<HTMLInputElement>("input[name='pickupLocation']");
       const dropoffInput = document.querySelector<HTMLInputElement>("input[name='dropoffLocation']");
 
       if (pickupInput) {
         const pickupAutocomplete = new google.maps.places.Autocomplete(pickupInput, {
           fields: ["formatted_address", "geometry", "name"],
-          // componentRestrictions: { country: "us" }, // optional
         });
         pickupAutocomplete.addListener("place_changed", () => {
           const place = pickupAutocomplete.getPlace();
@@ -77,7 +82,6 @@ const BookingForm: React.FC<BookingFormProps> = ({
       if (dropoffInput) {
         const dropoffAutocomplete = new google.maps.places.Autocomplete(dropoffInput, {
           fields: ["formatted_address", "geometry", "name"],
-          // componentRestrictions: { country: "us" },
         });
         dropoffAutocomplete.addListener("place_changed", () => {
           const place = dropoffAutocomplete.getPlace();
@@ -170,6 +174,16 @@ const BookingForm: React.FC<BookingFormProps> = ({
             Icon={EnvelopeIcon}
           />
         </div>
+
+        {/* NEW: Optional Flight Number */}
+        <TextInput
+          label="Flight Number (optional)"
+          name="flightNumber"
+          value={bookingDetails.flightNumber || ""}
+          onChange={onInputChange}
+          placeholder="e.g., AA1234 or DL208"
+          Icon={PlaneIcon}
+        />
 
         <div className="mt-8">
           <Button type="submit" fullWidth variant="primary">

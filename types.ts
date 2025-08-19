@@ -14,6 +14,7 @@ export interface VehicleOption {
 }
 
 export interface BookingData {
+  flightNumber: string;
   id: string; // Unique identifier for the booking
   created_at: string; // Timestamp from the database
   pickupLocation: string;
