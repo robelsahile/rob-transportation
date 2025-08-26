@@ -11,6 +11,7 @@ export interface VehicleOption {
   description: string;
   capacity: string;
   image: string;
+  price?: number; // if you plan to show prices later
 }
 
 // Full booking record (if you ever store it)
