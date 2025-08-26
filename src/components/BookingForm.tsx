@@ -1,7 +1,7 @@
 /// <reference types="google.maps" />
 
 import React, { useEffect } from "react";
-import { BookingData as BookingFormData, VehicleOption } from "../../types"; // ✅ use BookingData
+import { BookingFormData, VehicleOption } from "../types"; // 👈 use BookingFormData
 import TextInput from "./TextInput";
 import DateTimePicker from "./DateTimePicker";
 import VehicleSelector from "./VehicleSelector";
@@ -9,13 +9,12 @@ import Button from "./Button";
 import { loadGoogleMaps } from "../lib/googleMaps";
 
 interface BookingFormProps {
-  bookingDetails: BookingFormData; // ✅ not Omit<...>
+  bookingDetails: BookingFormData; // 👈 match the form type
   onInputChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => void;
   onVehicleSelect: (vehicle: VehicleOption) => void;
   onSubmit: () => void;
   vehicleOptions: VehicleOption[];
 }
-
 
 // Icons
 const LocationMarkerIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
@@ -133,12 +132,13 @@ const BookingForm: React.FC<BookingFormProps> = ({
           onChange={onInputChange}
           required
         />
-
-        <VehicleSelector
-          options={vehicleOptions}
-          selectedVehicle={bookingDetails.vehicleType}
-          onSelect={onVehicleSelect}
-        />
+        <div className="mb-6">
+          <VehicleSelector 
+            options={vehicleOptions}
+            selectedVehicle={bookingDetails.vehicleType}
+            onSelect={onVehicleSelect}
+          />
+        </div>
 
         <h3 className="text-lg font-medium text-brand-text-light mb-3 pt-4 border-t border-slate-200">
           Your Details

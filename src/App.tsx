@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { BookingFormData, VehicleOption } from './types';
+import { BookingFormData, VehicleOption } from './types';  // 👈 from './types'
 import { VEHICLE_OPTIONS } from './constants';
 import Header from './components/Header';
 import Footer from './components/Footer';
@@ -13,14 +13,14 @@ const initialBookingData: BookingFormData = {
   name: '',
   phone: '',
   email: '',
-  flightNumber: '', // optional, controlled input
+  flightNumber: '', // optional
 };
 
 const handleNavigateToAdmin = () => {
   alert('Admin view not implemented yet');
 };
 
-// ✅ Helper: allow anywhere in Washington State, avoid Washington DC
+// allow anywhere in WA State (avoid Washington, DC)
 function isWashingtonAddress(address: string) {
   if (!address) return false;
   const a = address.toLowerCase();
@@ -40,32 +40,26 @@ const App: React.FC = () => {
   const handleInputChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
       const { name, value } = e.target;
-      setBookingDetails((prev) => ({ ...prev, [name]: value }));
+      setBookingDetails(prev => ({ ...prev, [name]: value }));
     },
     []
   );
 
   const handleVehicleSelect = useCallback((vehicle: VehicleOption) => {
-    setBookingDetails((prev) => ({ ...prev, vehicleType: vehicle.id }));
+    setBookingDetails(prev => ({ ...prev, vehicleType: vehicle.id }));
   }, []);
 
   const handleSubmit = () => {
-    const { pickupLocation, dropoffLocation, dateTime, vehicleType, name, phone, email } =
-      bookingDetails;
+    const { pickupLocation, dropoffLocation, dateTime, vehicleType, name, phone, email } = bookingDetails;
 
-    // Required fields
     if (!pickupLocation || !dropoffLocation || !dateTime || !vehicleType || !name || !phone || !email) {
       alert('Please fill in all required fields.');
       return;
     }
-
-    // WA-only check for pickup
     if (!isWashingtonAddress(pickupLocation)) {
       alert('Pickup service is available only within Washington State. Please enter a valid WA location.');
       return;
     }
-
-    // Basic email + phone checks
     if (!/\S+@\S+\.\S+/.test(email)) {
       alert('Please enter a valid email address.');
       return;
@@ -75,7 +69,6 @@ const App: React.FC = () => {
       return;
     }
 
-    // Success (demo)
     alert('Thank you for your interest! This is a demonstration and booking submission is not active.');
   };
 
