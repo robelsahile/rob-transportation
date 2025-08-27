@@ -110,7 +110,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen flex flex-col bg-brand-bg text-brand-text">
-      <Header />
+      <Header onNavigateHome={() => setView("form")} />
 
       <main className="flex-grow container mx-auto px-4 py-8 max-w-4xl">
         {view === "form" && (
