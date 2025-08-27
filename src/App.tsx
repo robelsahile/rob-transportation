@@ -1,14 +1,20 @@
-import React, { useState, useCallback, useEffect } from "react";
-import { BookingFormData, VehicleOption } from "./types";
-import { VEHICLE_OPTIONS } from "./constants";
+import { useCallback, useMemo, useState } from "react";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
 import BookingForm from "./components/BookingForm";
 import ReviewBooking from "./components/ReviewBooking";
+import AdminDashboard from "./components/AdminDashboard";
+import { VEHICLE_OPTIONS } from "./constants";
+import {
+  BookingFormData,
+  BookingData,
+  VehicleOption,
+  VehicleType,
+} from "./types";
 
-type Step = "form" | "review";
+type View = "form" | "review" | "admin";
 
-const initialBookingData: BookingFormData = {
+const initialBooking: BookingFormData = {
   pickupLocation: "",
   dropoffLocation: "",
   dateTime: "",
@@ -16,17 +22,18 @@ const initialBookingData: BookingFormData = {
   name: "",
   phone: "",
   email: "",
-  flightNumber: "", // optional; keep as empty string
+  flightNumber: "",
 };
 
-const App: React.FC = () => {
-  const [bookingDetails, setBookingDetails] = useState<BookingFormData>(initialBookingData);
-  const [step, setStep] = useState<Step>("form");
+export default function App() {
+  const [view, setView] = useState<View>("form");
+  const [bookingDetails, setBookingDetails] =
+    useState<BookingFormData>(initialBooking);
 
-  useEffect(() => {
-    // scroll top on step change (helps match your screenshot feel)
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  }, [step]);
+  // simple in-memory “DB” of bookings so Admin can show something
+  const [bookings, setBookings] = useState<BookingData[]>([]);
+
+  const vehicleOptions: VehicleOption[] = useMemo(() => VEHICLE_OPTIONS, []);
 
   const handleInputChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -40,19 +47,21 @@ const App: React.FC = () => {
     setBookingDetails((prev) => ({ ...prev, vehicleType: vehicle.id }));
   }, []);
 
-  const isWashingtonPickup = (loc: string) =>
-    /,\s*WA\b/i.test(loc) || /Washington\b/i.test(loc);
-
-  const handleSubmit = () => {
+  // Go to review page after validating required fields
+  const handleSubmit = useCallback(() => {
     const { pickupLocation, dropoffLocation, dateTime, vehicleType, name, phone, email } =
       bookingDetails;
 
-    if (!pickupLocation || !dropoffLocation || !dateTime || !vehicleType || !name || !phone || !email) {
+    if (
+      !pickupLocation ||
+      !dropoffLocation ||
+      !dateTime ||
+      !vehicleType ||
+      !name ||
+      !phone ||
+      !email
+    ) {
       alert("Please fill in all required fields.");
-      return;
-    }
-    if (!isWashingtonPickup(pickupLocation)) {
-      alert("Pickup service is currently available in Washington state. Please enter a WA location.");
       return;
     }
     if (!/\S+@\S+\.\S+/.test(email)) {
@@ -64,36 +73,74 @@ const App: React.FC = () => {
       return;
     }
 
-    // Go to review step
-    setStep("review");
-  };
+    setView("review");
+  }, [bookingDetails]);
 
-  const handleEdit = () => setStep("form");
+  // Confirm -> save booking and go to Admin
+  const handleConfirmBooking = useCallback(() => {
+    const newBooking: BookingData = {
+      id: crypto.randomUUID(),
+      created_at: new Date().toISOString(),
+      pickupLocation: bookingDetails.pickupLocation,
+      dropoffLocation: bookingDetails.dropoffLocation,
+      dateTime: bookingDetails.dateTime,
+      vehicleType:
+        bookingDetails.vehicleType ?? VehicleType.SEDAN, // fallback
+      name: bookingDetails.name,
+      phone: bookingDetails.phone,
+      email: bookingDetails.email,
+      flightNumber: bookingDetails.flightNumber?.trim()
+        ? bookingDetails.flightNumber
+        : undefined,
+    };
 
-  const handleConfirm = () => {
-    alert("Thank you! This is a demo — booking submission isn’t live yet.");
-    // TODO: integrate backend/email when ready
-  };
+    setBookings((prev) => [newBooking, ...prev]);
+    setView("admin");
+  }, [bookingDetails]);
+
+  // Footer link -> open Admin
+  const handleNavigateToAdmin = useCallback(() => {
+    setView("admin");
+  }, []);
+
+  // Admin “New Booking” -> back to form
+  const handleNavigateToCustomer = useCallback(() => {
+    setView("form");
+  }, []);
 
   return (
     <div className="min-h-screen flex flex-col bg-brand-bg text-brand-text">
       <Header />
+
       <main className="flex-grow container mx-auto px-4 py-8 max-w-4xl">
-        {step === "form" ? (
+        {view === "form" && (
           <BookingForm
             bookingDetails={bookingDetails}
             onInputChange={handleInputChange}
             onVehicleSelect={handleVehicleSelect}
             onSubmit={handleSubmit}
-            vehicleOptions={VEHICLE_OPTIONS}
+            vehicleOptions={vehicleOptions}
           />
-        ) : (
-          <ReviewBooking data={bookingDetails} onEdit={handleEdit} onConfirm={handleConfirm} />
+        )}
+
+        {view === "review" && (
+          <ReviewBooking
+            data={bookingDetails}
+            onEdit={() => setView("form")}
+            onConfirm={handleConfirmBooking}
+          />
+        )}
+
+        {view === "admin" && (
+          <AdminDashboard
+            bookings={bookings}
+            onNavigateToCustomer={handleNavigateToCustomer}
+            isLoading={false}
+          />
         )}
       </main>
-      <Footer onNavigateToAdmin={() => alert("Admin view not implemented yet")} />
+
+      <Footer onNavigateToAdmin={handleNavigateToAdmin} />
     </div>
   );
-};
-
-export default App;
+}

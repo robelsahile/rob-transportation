@@ -14,19 +14,21 @@ export interface VehicleOption {
   price?: number; // if you plan to show prices later
 }
 
-// Full booking record (if you ever store it)
+// Full booking record stored in admin/dashboard
 export interface BookingData {
   id: string;
   created_at: string;
   pickupLocation: string;
   dropoffLocation: string;
   dateTime: string;
-  vehicleType: VehicleType | null;
+  vehicleType: VehicleType; // ✅ required once saved
   name: string;
   phone: string;
   email: string;
   flightNumber?: string; // optional
 }
 
-// 👇 Use this for the form everywhere
-export type BookingFormData = Omit<BookingData, 'id' | 'created_at'>;
+// For form use (before saving)
+export type BookingFormData = Omit<BookingData, 'id' | 'created_at' | 'vehicleType'> & {
+  vehicleType: VehicleType | null; // ✅ form can start with null
+};
