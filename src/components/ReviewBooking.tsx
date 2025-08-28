@@ -36,12 +36,12 @@ export default function ReviewBooking({ data, onEdit, onConfirm }: Props) {
         <dl className="divide-y divide-slate-200 text-sm">
           <div className="grid grid-cols-3 gap-4 p-3 sm:p-4 bg-white">
             <dt className="col-span-1 text-brand-text-light">Pickup Location</dt>
-            <dd className="col-span-2 text-brand-text text-right">{data.pickupLocation}</dd>
+            <dd className="col-span-2 text-brand-text text-right whitespace-pre-line">{data.pickupLocation}</dd>
           </div>
 
           <div className="grid grid-cols-3 gap-4 p-3 sm:p-4 bg-white">
             <dt className="col-span-1 text-brand-text-light">Drop-off Location</dt>
-            <dd className="col-span-2 text-brand-text text-right">{data.dropoffLocation}</dd>
+            <dd className="col-span-2 text-brand-text text-right whitespace-pre-line">{data.dropoffLocation}</dd>
           </div>
 
           <div className="grid grid-cols-3 gap-4 p-3 sm:p-4 bg-white">

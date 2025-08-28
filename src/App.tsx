@@ -112,7 +112,7 @@ export default function App() {
     <div className="min-h-screen flex flex-col bg-brand-bg text-brand-text">
       <Header onNavigateHome={() => setView("form")} />
 
-      <main className="flex-grow container mx-auto px-4 py-8 max-w-4xl">
+      <main className="flex-grow container mx-auto px-4 sm:px-8 py-8 max-w-5xl">
         {view === "form" && (
           <BookingForm
             bookingDetails={bookingDetails}

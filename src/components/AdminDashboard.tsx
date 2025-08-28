@@ -68,15 +68,24 @@ export default function AdminDashboard({
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm font-medium text-brand-text">{b.name}</div>
                     <div className="text-sm text-brand-text-light">{b.email}</div>
+                    <div className="text-sm text-brand-text-light">{b.phone}</div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-brand-text-light">
+                  {/* Trip Details */}
+                  <td className="px-6 py-4 text-sm text-brand-text-light">
                     <div className="font-semibold text-brand-text">
-                      From: <span className="font-normal">{b.pickupLocation}</span>
+                      From:{" "}
+                      <span className="font-normal whitespace-pre-line">
+                        {b.pickupLocation}
+                      </span>
                     </div>
                     <div className="font-semibold text-brand-text">
-                      To: <span className="font-normal">{b.dropoffLocation}</span>
+                      To:{" "}
+                      <span className="font-normal whitespace-pre-line">
+                        {b.dropoffLocation}
+                      </span>
                     </div>
                   </td>
+
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-brand-text">
                     {b.vehicleType}
                   </td>

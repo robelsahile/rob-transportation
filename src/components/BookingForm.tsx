@@ -1,22 +1,25 @@
 /// <reference types="google.maps" />
 
 import React, { useEffect } from "react";
-import { BookingFormData, VehicleOption } from "../types"; // 👈 use BookingFormData
+import { BookingFormData, VehicleOption } from "../types";
 import TextInput from "./TextInput";
 import DateTimePicker from "./DateTimePicker";
 import VehicleSelector from "./VehicleSelector";
 import Button from "./Button";
 import { loadGoogleMaps } from "../lib/googleMaps";
 
+/* ----------------------------- Types/Props ----------------------------- */
+
 interface BookingFormProps {
-  bookingDetails: BookingFormData; // 👈 match the form type
+  bookingDetails: BookingFormData;
   onInputChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => void;
   onVehicleSelect: (vehicle: VehicleOption) => void;
   onSubmit: () => void;
   vehicleOptions: VehicleOption[];
 }
 
-// Icons
+/* -------------------------------- Icons -------------------------------- */
+
 const LocationMarkerIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" {...props}>
     <path
@@ -41,12 +44,85 @@ const EnvelopeIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
     <path d="M2.003 5.884L10 11.884l7.997-6M2 12h.01M2 15h.01M4 15h.01M6 15h.01M8 15h.01M10 15h.01M12 15h.01M14 15h.01M16 15h.01M18 15h.01M20 15h.01M2.992 18h14.016a2 2 0 002-2V6a2 2 0 00-2-2H2.992a2 2 0 00-2 2v10a2 2 0 002 2z" />
   </svg>
 );
-// NEW: Plane icon for Flight Number
 const PlaneIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" {...props}>
     <path d="M10.18 4.02l6.6 5.11a1 1 0 01-.42 1.76l-3.5.9-1.3 3.25a1 1 0 01-1.86-.02l-1.2-3.1-3.62-.93a1 1 0 01-.3-1.78l6.6-5.19a1 1 0 011.1 0z" />
   </svg>
 );
+
+/* ----------------------------- Helper utils ---------------------------- */
+
+// Build “Name + newline + Address” display (avoids duplication)
+function formatPlaceDisplay(place: google.maps.places.PlaceResult, fallback: string) {
+  const name = place.name?.trim();
+  const addr = place.formatted_address?.trim();
+
+  if (name && addr) {
+    const addrLower = addr.toLowerCase();
+    if (!addrLower.includes(name.toLowerCase())) {
+      return `${name}\n${addr}`; // newline for 2-line rendering
+    }
+    return addr; // address already includes name
+  }
+  return name || addr || fallback;
+}
+
+/* -------------------- Two-line visual Address input UI ------------------- */
+
+type AddressFieldProps = {
+  label: string;
+  name: "pickupLocation" | "dropoffLocation";
+  value: string;
+  placeholder: string;
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  Icon: React.FC<React.SVGProps<SVGSVGElement>>;
+  required?: boolean;
+};
+
+const AddressField: React.FC<AddressFieldProps> = ({
+  label,
+  name,
+  value,
+  placeholder,
+  onChange,
+  Icon,
+  required,
+}) => {
+  return (
+    <label className="block">
+      <span className="block text-sm font-medium text-brand-text-light">
+        {label} {required && <span className="text-red-500">*</span>}
+      </span>
+      <div className="relative mt-1">
+        {/* Real input (transparent text so caret works) */}
+        <input
+          name={name}
+          value={value}
+          onChange={onChange}
+          autoComplete="off"
+          required={required}
+          className="w-full h-12 rounded-md border border-slate-300 bg-white pl-10 pr-3
+                     text-transparent caret-brand-primary placeholder-transparent
+                     focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"
+          placeholder={placeholder}
+        />
+        {/* Icon, vertically centered */}
+        <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+          <Icon className="h-5 w-5 text-slate-400" />
+        </div>
+        {/* Overlay with proper padding */}
+        <div className="absolute inset-0 flex items-center rounded-md pl-10 pr-3 pointer-events-none">
+          <div className={`whitespace-pre-line text-sm ${value ? "text-brand-text" : "text-slate-400"}`}>
+            {value ? value : placeholder}
+          </div>
+        </div>
+      </div>
+    </label>
+  );
+};
+
+
+/* ------------------------------ Main Form ------------------------------- */
 
 const BookingForm: React.FC<BookingFormProps> = ({
   bookingDetails,
@@ -72,7 +148,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
         });
         pickupAutocomplete.addListener("place_changed", () => {
           const place = pickupAutocomplete.getPlace();
-          const value = place.formatted_address || place.name || pickupInput.value;
+          const value = formatPlaceDisplay(place, pickupInput.value);
           const evt = { target: { name: "pickupLocation", value } } as React.ChangeEvent<HTMLInputElement>;
           onInputChange(evt);
         });
@@ -84,7 +160,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
         });
         dropoffAutocomplete.addListener("place_changed", () => {
           const place = dropoffAutocomplete.getPlace();
-          const value = place.formatted_address || place.name || dropoffInput.value;
+          const value = formatPlaceDisplay(place, dropoffInput.value);
           const evt = { target: { name: "dropoffLocation", value } } as React.ChangeEvent<HTMLInputElement>;
           onInputChange(evt);
         });
@@ -94,7 +170,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
 
   return (
     <div className="bg-brand-surface p-6 sm:p-8 rounded-lg shadow-xl">
-      <h2 className="text-2xl font-semibold text-brand-text mb-6 border-b pb-3 border-slate-200">
+      <h2 className="text-2xl font-semibold text-brand-text mb-4 border-b pb-3 border-slate-200">
         Book Your Ride
       </h2>
 
@@ -104,25 +180,26 @@ const BookingForm: React.FC<BookingFormProps> = ({
           onSubmit();
         }}
       >
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6">
-          <TextInput
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 mb-6">
+          <AddressField
             label="Pickup Location"
             name="pickupLocation"
             value={bookingDetails.pickupLocation}
-            onChange={onInputChange}
+            onChange={onInputChange as (e: React.ChangeEvent<HTMLInputElement>) => void}
             placeholder="e.g., SeaTac International Airport"
-            required
             Icon={LocationMarkerIcon}
+            required
           />
-          <TextInput
+          <AddressField
             label="Drop-off Location"
             name="dropoffLocation"
             value={bookingDetails.dropoffLocation}
-            onChange={onInputChange}
+            onChange={onInputChange as (e: React.ChangeEvent<HTMLInputElement>) => void}
             placeholder="e.g., Space Needle, Seattle, WA"
-            required
             Icon={LocationMarkerIcon}
+            required
           />
+
         </div>
 
         <DateTimePicker
@@ -132,8 +209,9 @@ const BookingForm: React.FC<BookingFormProps> = ({
           onChange={onInputChange}
           required
         />
+
         <div className="mb-6">
-          <VehicleSelector 
+          <VehicleSelector
             options={vehicleOptions}
             selectedVehicle={bookingDetails.vehicleType}
             onSelect={onVehicleSelect}
@@ -175,7 +253,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
           />
         </div>
 
-        {/* NEW: Optional Flight Number */}
+        {/* Optional Flight Number */}
         <TextInput
           label="Flight Number (optional)"
           name="flightNumber"
