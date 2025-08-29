@@ -52,7 +52,8 @@ const PlaneIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
 
 /* ----------------------------- Helper utils ---------------------------- */
 
-// Build “Name + newline + Address” display (avoids duplication)
+/** Build & store “Name + newline + Address” (avoids duplicates).
+ *  This is what gets saved into bookingDetails.* and used by Review/Admin. */
 function formatPlaceDisplay(place: google.maps.places.PlaceResult, fallback: string) {
   const name = place.name?.trim();
   const addr = place.formatted_address?.trim();
@@ -60,11 +61,22 @@ function formatPlaceDisplay(place: google.maps.places.PlaceResult, fallback: str
   if (name && addr) {
     const addrLower = addr.toLowerCase();
     if (!addrLower.includes(name.toLowerCase())) {
-      return `${name}\n${addr}`; // newline for 2-line rendering
+      return `${name}\n${addr}`; // stored value: two lines
     }
     return addr; // address already includes name
   }
   return name || addr || fallback;
+}
+
+/** For the INPUT’s visual overlay ONLY:
+ *  If there’s a name in the stored value, show just the name;
+ *  otherwise show the (numbered) address. */
+function extractDisplayNameOnly(stored: string): string {
+  if (!stored) return "";
+  // If our stored value has "name\naddress", take the name.
+  const [firstLine] = stored.split("\n");
+  // If there’s no newline, firstLine is entire value: fine to show.
+  return firstLine.trim();
 }
 
 /* -------------------- Two-line visual Address input UI ------------------- */
@@ -88,6 +100,9 @@ const AddressField: React.FC<AddressFieldProps> = ({
   Icon,
   required,
 }) => {
+  // 👇 Show only the name if present, else the whole address
+  const visual = value ? extractDisplayNameOnly(value) : "";
+
   return (
     <label className="block">
       <span className="block text-sm font-medium text-brand-text-light">
@@ -110,17 +125,16 @@ const AddressField: React.FC<AddressFieldProps> = ({
         <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
           <Icon className="h-5 w-5 text-slate-400" />
         </div>
-        {/* Overlay with proper padding */}
+        {/* Overlay that shows *only the name* if available */}
         <div className="absolute inset-0 flex items-center rounded-md pl-10 pr-3 pointer-events-none">
-          <div className={`whitespace-pre-line text-sm ${value ? "text-brand-text" : "text-slate-400"}`}>
-            {value ? value : placeholder}
+          <div className={`text-sm truncate ${value ? "text-brand-text" : "text-slate-400"}`}>
+            {value ? visual : placeholder}
           </div>
         </div>
       </div>
     </label>
   );
 };
-
 
 /* ------------------------------ Main Form ------------------------------- */
 
@@ -199,7 +213,6 @@ const BookingForm: React.FC<BookingFormProps> = ({
             Icon={LocationMarkerIcon}
             required
           />
-
         </div>
 
         <DateTimePicker
