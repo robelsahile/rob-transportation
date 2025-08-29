@@ -9,7 +9,6 @@ import Button from "./Button";
 import { loadGoogleMaps } from "../lib/googleMaps";
 
 /* ----------------------------- Types/Props ----------------------------- */
-
 interface BookingFormProps {
   bookingDetails: BookingFormData;
   onInputChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => void;
@@ -19,7 +18,6 @@ interface BookingFormProps {
 }
 
 /* -------------------------------- Icons -------------------------------- */
-
 const LocationMarkerIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" {...props}>
     <path
@@ -50,36 +48,18 @@ const PlaneIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
   </svg>
 );
 
-/* ----------------------------- Helper utils ---------------------------- */
-
-/** Build & store “Name + newline + Address” (avoids duplicates).
- *  This is what gets saved into bookingDetails.* and used by Review/Admin. */
+/* ----------------------------- Name+Address overlay ---------------------------- */
 function formatPlaceDisplay(place: google.maps.places.PlaceResult, fallback: string) {
   const name = place.name?.trim();
   const addr = place.formatted_address?.trim();
 
   if (name && addr) {
     const addrLower = addr.toLowerCase();
-    if (!addrLower.includes(name.toLowerCase())) {
-      return `${name}\n${addr}`; // stored value: two lines
-    }
-    return addr; // address already includes name
+    if (!addrLower.includes(name.toLowerCase())) return `${name}\n${addr}`;
+    return addr;
   }
   return name || addr || fallback;
 }
-
-/** For the INPUT’s visual overlay ONLY:
- *  If there’s a name in the stored value, show just the name;
- *  otherwise show the (numbered) address. */
-function extractDisplayNameOnly(stored: string): string {
-  if (!stored) return "";
-  // If our stored value has "name\naddress", take the name.
-  const [firstLine] = stored.split("\n");
-  // If there’s no newline, firstLine is entire value: fine to show.
-  return firstLine.trim();
-}
-
-/* -------------------- Two-line visual Address input UI ------------------- */
 
 type AddressFieldProps = {
   label: string;
@@ -99,45 +79,36 @@ const AddressField: React.FC<AddressFieldProps> = ({
   onChange,
   Icon,
   required,
-}) => {
-  // 👇 Show only the name if present, else the whole address
-  const visual = value ? extractDisplayNameOnly(value) : "";
-
-  return (
-    <label className="block">
-      <span className="block text-sm font-medium text-brand-text-light">
-        {label} {required && <span className="text-red-500">*</span>}
-      </span>
-      <div className="relative mt-1">
-        {/* Real input (transparent text so caret works) */}
-        <input
-          name={name}
-          value={value}
-          onChange={onChange}
-          autoComplete="off"
-          required={required}
-          className="w-full h-12 rounded-md border border-slate-300 bg-white pl-10 pr-3
-                     text-transparent caret-brand-primary placeholder-transparent
-                     focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"
-          placeholder={placeholder}
-        />
-        {/* Icon, vertically centered */}
-        <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
-          <Icon className="h-5 w-5 text-slate-400" />
-        </div>
-        {/* Overlay that shows *only the name* if available */}
-        <div className="absolute inset-0 flex items-center rounded-md pl-10 pr-3 pointer-events-none">
-          <div className={`text-sm truncate ${value ? "text-brand-text" : "text-slate-400"}`}>
-            {value ? visual : placeholder}
-          </div>
+}) => (
+  <label className="block">
+    <span className="block text-sm font-medium text-brand-text-light">
+      {label} {required && <span className="text-red-500">*</span>}
+    </span>
+    <div className="relative mt-1">
+      <input
+        name={name}
+        value={value}
+        onChange={onChange}
+        autoComplete="off"
+        required={required}
+        className="w-full h-12 rounded-md border border-slate-300 bg-white pl-10 pr-3
+                   text-transparent caret-brand-primary placeholder-transparent
+                   focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"
+        placeholder={placeholder}
+      />
+      <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+        <Icon className="h-5 w-5 text-slate-400" />
+      </div>
+      <div className="absolute inset-0 flex items-center rounded-md pl-10 pr-3 pointer-events-none">
+        <div className={`whitespace-pre-line text-sm ${value ? "text-brand-text" : "text-slate-400"}`}>
+          {value ? value : placeholder}
         </div>
       </div>
-    </label>
-  );
-};
+    </div>
+  </label>
+);
 
-/* ------------------------------ Main Form ------------------------------- */
-
+/* -------------------------------- Component ------------------------------- */
 const BookingForm: React.FC<BookingFormProps> = ({
   bookingDetails,
   onInputChange,
@@ -215,8 +186,8 @@ const BookingForm: React.FC<BookingFormProps> = ({
           />
         </div>
 
+        {/* New Uber-like Date & Time */}
         <DateTimePicker
-          label="Date & Time"
           name="dateTime"
           value={bookingDetails.dateTime}
           onChange={onInputChange}
@@ -234,6 +205,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
         <h3 className="text-lg font-medium text-brand-text-light mb-3 pt-4 border-t border-slate-200">
           Your Details
         </h3>
+
         <TextInput
           label="Full Name"
           name="name"
@@ -266,7 +238,6 @@ const BookingForm: React.FC<BookingFormProps> = ({
           />
         </div>
 
-        {/* Optional Flight Number */}
         <TextInput
           label="Flight Number (optional)"
           name="flightNumber"
