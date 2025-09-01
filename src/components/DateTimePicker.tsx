@@ -1,136 +1,124 @@
-// src/components/DateTimePicker.tsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
 
 type Props = {
   name: string; // "dateTime"
-  value: string; // e.g. "2025-08-29T10:00" or ""
+  value: string; // "YYYY-MM-DDTHH:mm"
   onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => void;
   required?: boolean;
 };
 
-/* -------------------------- format helpers -------------------------- */
-const fmtDateLabel = (d: Date) =>
-  d.toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" });
-
-const fmtTimeLabel = (h: number, m: number) => {
-  const d = new Date();
-  d.setHours(h, m, 0, 0);
-  return d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
-};
-
 const pad = (n: number) => (n < 10 ? `0${n}` : `${n}`);
 
-function toISODate(d: Date) {
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+// ---- Helpers --------------------------------------------------------------
+function splitValue(v: string) {
+  if (!v) return { date: "", time: "" };
+  const [d, t] = v.split("T");
+  return { date: d ?? "", time: (t ?? "").slice(0, 5) }; // HH:mm only
 }
 
-/* ------------------------------- component ------------------------------- */
+function joinValue(date: string, time: string) {
+  if (!date) return "";
+  const t = time || "00:00";
+  return `${date}T${t}`;
+}
+
+// Format a YYYY-MM-DD as local date label (no UTC shift)
+function labelFromISODate(iso: string) {
+  if (!iso) return "";
+  const [y, m, d] = iso.split("-").map((s) => parseInt(s, 10));
+  const dt = new Date(y, (m ?? 1) - 1, d ?? 1);
+  return dt.toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" });
+}
+
+// Build the calendar grid for a given month
+function buildDays(year: number, monthZeroBased: number) {
+  const first = new Date(year, monthZeroBased, 1);
+  const startWeekday = first.getDay(); // 0..6
+  const last = new Date(year, monthZeroBased + 1, 0);
+  const total = last.getDate();
+
+  const cells: Array<{ key: string; date?: Date }> = [];
+  for (let i = 0; i < startWeekday; i++) cells.push({ key: `b-${i}` });
+  for (let d = 1; d <= total; d++) cells.push({ key: `d-${d}`, date: new Date(year, monthZeroBased, d) });
+  return cells;
+}
+
+// 10-minute time options for the dropdown
+function buildTimes() {
+  const opts: { key: string; label: string; value: string }[] = [];
+  for (let h = 0; h < 24; h++) {
+    for (let m = 0; m < 60; m += 10) {
+      const v = `${pad(h)}:${pad(m)}`;
+      const dt = new Date();
+      dt.setHours(h, m, 0, 0);
+      const label = dt.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+      opts.push({ key: v, label, value: v });
+    }
+  }
+  return opts;
+}
+
 export default function DateTimePicker({ name, value, onChange, required }: Props) {
-  // parse incoming combined value (if any)
-  const parsed = useMemo(() => {
-    if (!value) return { date: "", time: "" };
-    const [d, t] = value.split("T");
-    return { date: d ?? "", time: (t ?? "").slice(0, 5) };
-  }, [value]);
+  // current combined value -> pieces
+  const { date, time } = useMemo(() => splitValue(value), [value]);
 
-  // keep LOCAL selections so picking date OR time sticks visually
-  const [selDate, setSelDate] = useState<string>(parsed.date);
-  const [selTime, setSelTime] = useState<string>(parsed.time);
-
-  // sync local state if parent value changes from outside
-  useEffect(() => {
-    setSelDate(parsed.date);
-    setSelTime(parsed.time);
-  }, [parsed.date, parsed.time]);
-
-  // popovers
-  const [openCal, setOpenCal] = useState(false);
-  const [openTimes, setOpenTimes] = useState(false);
-  const calendarRef = useRef<HTMLDivElement | null>(null);
-  const timesRef = useRef<HTMLDivElement | null>(null);
-
-  // Tomorrow placeholder for date
+  // default “tomorrow” placeholder
   const tomorrow = useMemo(() => {
     const d = new Date();
     d.setDate(d.getDate() + 1);
     return d;
   }, []);
 
-  // current calendar view
-  const [viewYear, setViewYear] = useState<number>(() =>
-    selDate ? Number(selDate.slice(0, 4)) : tomorrow.getFullYear()
-  );
-  const [viewMonth, setViewMonth] = useState<number>(() =>
-    selDate ? Number(selDate.slice(5, 7)) - 1 : tomorrow.getMonth()
-  );
+  // calendar popover state
+  const [openCal, setOpenCal] = useState(false);
+  const [openTimes, setOpenTimes] = useState(false);
+  const calRef = useRef<HTMLDivElement | null>(null);
+  const timeRef = useRef<HTMLDivElement | null>(null);
 
-  // month days grid
-  const days = useMemo(() => {
-    const first = new Date(viewYear, viewMonth, 1);
-    const startWeekday = first.getDay();
-    const last = new Date(viewYear, viewMonth + 1, 0);
-    const totalDays = last.getDate();
+  // month view state
+  const [viewYear, setViewYear] = useState<number>(() => (date ? +date.slice(0, 4) : tomorrow.getFullYear()));
+  const [viewMonth, setViewMonth] = useState<number>(() => (date ? +date.slice(5, 7) - 1 : tomorrow.getMonth()));
 
-    const cells: Array<{ key: string; date?: Date }> = [];
-    for (let i = 0; i < startWeekday; i++) cells.push({ key: `b-${i}` });
-    for (let d = 1; d <= totalDays; d++) cells.push({ key: `d-${d}`, date: new Date(viewYear, viewMonth, d) });
-    return cells;
-  }, [viewYear, viewMonth]);
+  const days = useMemo(() => buildDays(viewYear, viewMonth), [viewYear, viewMonth]);
+  const timeOptions = useMemo(() => buildTimes(), []);
 
-  // 10-minute time slots
-  const timeOptions = useMemo(() => {
-    const opts: { key: string; label: string; value: string }[] = [];
-    for (let h = 0; h < 24; h++) {
-      for (let m = 0; m < 60; m += 10) {
-        const v = `${pad(h)}:${pad(m)}`;
-        opts.push({ key: v, label: fmtTimeLabel(h, m), value: v });
-      }
-    }
-    return opts;
-  }, []);
-
-  // close on outside click
+  // Close popovers on outside click — use 'click' (not 'mousedown') so button onClick runs first
   useEffect(() => {
     function onDocClick(e: MouseEvent) {
       const t = e.target as Node;
-      if (openCal && calendarRef.current && !calendarRef.current.contains(t)) setOpenCal(false);
-      if (openTimes && timesRef.current && !timesRef.current.contains(t)) setOpenTimes(false);
+      if (openCal && calRef.current && !calRef.current.contains(t)) setOpenCal(false);
+      if (openTimes && timeRef.current && !timeRef.current.contains(t)) setOpenTimes(false);
     }
-    document.addEventListener("mousedown", onDocClick);
-    return () => document.removeEventListener("mousedown", onDocClick);
+    document.addEventListener("click", onDocClick);
+    return () => document.removeEventListener("click", onDocClick);
   }, [openCal, openTimes]);
 
-  // Emit combined ONLY when both are present (but keep local selection always)
-  function emitIfComplete(nextDate: string, nextTime: string) {
-    if (nextDate && nextTime) {
-      const evt = { target: { name, value: `${nextDate}T${nextTime}` } } as unknown as React.ChangeEvent<HTMLInputElement>;
-      onChange(evt);
-    } else {
-      // If not complete, still notify parent with empty to keep required validation;
-      // comment out the next 2 lines if you prefer leaving parent value untouched.
-      const evt = { target: { name, value: "" } } as unknown as React.ChangeEvent<HTMLInputElement>;
-      onChange(evt);
-    }
-  }
+  // Emit helper
+  const emit = (nextDate: string, nextTime: string) => {
+    onChange({
+      target: { name, value: joinValue(nextDate, nextTime) },
+    } as React.ChangeEvent<HTMLInputElement>);
+  };
 
-  function pickDate(d: Date) {
-    const newDate = toISODate(d);
-    setSelDate(newDate);
-    emitIfComplete(newDate, selTime);
+  const pickDate = (d: Date) => {
+    const iso = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    emit(iso, time);
     setOpenCal(false);
-  }
+    // keep the month view in sync
+    setViewYear(d.getFullYear());
+    setViewMonth(d.getMonth());
+  };
 
-  function pickTime(v: string) {
-    setSelTime(v);
-    emitIfComplete(selDate, v);
+  const pickTime = (v: string) => {
+    emit(date, v);
     setOpenTimes(false);
-  }
+  };
 
   return (
     <div className="mb-6">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {/* Date */}
-        <div className="relative" ref={calendarRef}>
+        <div className="relative" ref={calRef}>
           <label className="block text-sm font-medium text-brand-text-light mb-1">
             Date {required && <span className="text-red-500">*</span>}
           </label>
@@ -145,7 +133,7 @@ export default function DateTimePicker({ name, value, onChange, required }: Prop
               setOpenTimes(false);
             }}
           >
-            {/* calendar icon (centered) */}
+            {/* calendar icon, vertically centered */}
             <span className="absolute left-3 top-1/2 -translate-y-1/4 pointer-events-none">
               <svg className="h-5 w-5 text-slate-600" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                 <path d="M6 2a1 1 0 012 0v1h4V2a1 1 0 112 0v1h1a2 2 0 012 2v2H3V5a2 2 0 012-2h1V2zM3 9h14v6a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/>
@@ -153,10 +141,9 @@ export default function DateTimePicker({ name, value, onChange, required }: Prop
             </span>
 
             <span className="block truncate">
-              {selDate ? fmtDateLabel(new Date(selDate)) : fmtDateLabel(tomorrow)}
+              {date ? labelFromISODate(date) : labelFromISODate(`${tomorrow.getFullYear()}-${pad(tomorrow.getMonth()+1)}-${pad(tomorrow.getDate())}`)}
             </span>
 
-            {/* caret (centered) */}
             <span className="absolute right-4 top-1/2 -translate-y-1/4 text-slate-600">▾</span>
           </button>
 
@@ -169,7 +156,10 @@ export default function DateTimePicker({ name, value, onChange, required }: Prop
                   onClick={() =>
                     setViewMonth((m) => {
                       const nm = m - 1;
-                      if (nm < 0) { setViewYear((y) => y - 1); return 11; }
+                      if (nm < 0) {
+                        setViewYear((y) => y - 1);
+                        return 11;
+                      }
                       return nm;
                     })
                   }
@@ -186,7 +176,10 @@ export default function DateTimePicker({ name, value, onChange, required }: Prop
                   onClick={() =>
                     setViewMonth((m) => {
                       const nm = m + 1;
-                      if (nm > 11) { setViewYear((y) => y + 1); return 0; }
+                      if (nm > 11) {
+                        setViewYear((y) => y + 1);
+                        return 0;
+                      }
                       return nm;
                     })
                   }
@@ -197,27 +190,29 @@ export default function DateTimePicker({ name, value, onChange, required }: Prop
               </div>
 
               <div className="grid grid-cols-7 gap-1 text-center text-xs text-slate-500 px-1 pt-1 pb-2">
-                {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map((d) => <div key={d}>{d}</div>)}
+                {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map((d) => (
+                  <div key={d}>{d}</div>
+                ))}
               </div>
 
               <div className="grid grid-cols-7 gap-1 px-1 pb-1">
-                {days.map(({ key, date }) =>
-                  !date ? (
-                    <div key={key} className="h-9 rounded-md" aria-hidden="true" />
-                  ) : (
+                {days.map(({ key, date: d }) =>
+                  d ? (
                     <button
                       key={key}
                       type="button"
                       className={[
                         "h-9 rounded-md text-sm",
-                        selDate && toISODate(date) === selDate
+                        date && `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}` === date
                           ? "bg-brand-primary text-white"
                           : "hover:bg-slate-100 text-brand-text",
                       ].join(" ")}
-                      onClick={() => pickDate(date)}
+                      onClick={() => pickDate(d)}
                     >
-                      {date.getDate()}
+                      {d.getDate()}
                     </button>
+                  ) : (
+                    <div key={key} className="h-9 rounded-md" aria-hidden="true" />
                   )
                 )}
               </div>
@@ -230,7 +225,7 @@ export default function DateTimePicker({ name, value, onChange, required }: Prop
         </div>
 
         {/* Time */}
-        <div className="relative" ref={timesRef}>
+        <div className="relative" ref={timeRef}>
           <label className="block text-sm font-medium text-brand-text-light mb-1">
             Time {required && <span className="text-red-500">*</span>}
           </label>
@@ -245,7 +240,6 @@ export default function DateTimePicker({ name, value, onChange, required }: Prop
               setOpenCal(false);
             }}
           >
-            {/* clock icon (centered) */}
             <span className="absolute left-3 top-1/2 -translate-y-1/4 pointer-events-none">
               <svg className="h-5 w-5 text-slate-600" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                 <path
@@ -256,9 +250,8 @@ export default function DateTimePicker({ name, value, onChange, required }: Prop
               </svg>
             </span>
 
-            <span className="block truncate">{selTime ? selTime : "Select Time"}</span>
+            <span className="block truncate">{time || "Select Time"}</span>
 
-            {/* caret (centered) */}
             <span className="absolute right-4 top-1/2 -translate-y-1/4 text-slate-600">▾</span>
           </button>
 
@@ -271,7 +264,7 @@ export default function DateTimePicker({ name, value, onChange, required }: Prop
                   type="button"
                   className={[
                     "w-full text-left px-3 py-2 text-sm rounded hover:bg-slate-100",
-                    selTime === t.value ? "bg-slate-100 font-semibold" : "",
+                    time === t.value ? "bg-slate-100 font-semibold" : "",
                   ].join(" ")}
                   onClick={() => pickTime(t.value)}
                 >
@@ -283,16 +276,16 @@ export default function DateTimePicker({ name, value, onChange, required }: Prop
         </div>
       </div>
 
-      {/* hidden input to keep required validation if you rely on it */}
+      {/* Hidden input preserves existing “required” validation on the combined field */}
       <input
         aria-hidden="true"
         tabIndex={-1}
         className="sr-only"
         name={name}
         required={required}
-        value={selDate && selTime ? `${selDate}T${selTime}` : ""}
-        readOnly
+        value={value}
         onChange={() => {}}
+        readOnly
       />
     </div>
   );
