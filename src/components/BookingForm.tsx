@@ -97,13 +97,13 @@ const AddressField: React.FC<AddressFieldProps> = ({
           onChange={onChange}
           autoComplete="off"
           required={required}
-          className="w-full h-12 rounded-md border border-slate-300 bg-white pl-10 pr-3
+          className="w-full h-12 rounded-md border border-slate-400 bg-white pl-10 pr-3
                      text-transparent caret-brand-primary placeholder-transparent
                      focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"
           placeholder={placeholder}
         />
         <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
-          <Icon className="h-5 w-5 text-slate-400" />
+          <Icon className="h-5 w-5 text-slate-500" />
         </div>
         {/* Overlay that shows ONLY the name (first line) if present */}
         <div className="absolute inset-0 flex items-center rounded-md pl-10 pr-3 pointer-events-none">
