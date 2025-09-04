@@ -20,7 +20,7 @@ export const VEHICLE_OPTIONS: VehicleOption[] = [
     id: VehicleType.VAN, 
     name: 'Executive Van', 
     description: 'Designed for larger groups up to 14 passengers. Great for cruise transfers, events, or group outings where everyone wants to travel together hassle-free.', 
-    capacity: '1-14 passengers', 
+    capacity: '1-12 passengers', 
     image: 'Mercedes_sprinter_van.webp' 
   },
 ];
