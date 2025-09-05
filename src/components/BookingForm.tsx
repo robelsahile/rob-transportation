@@ -1,12 +1,16 @@
 /// <reference types="google.maps" />
 
-import React, { useEffect } from "react";
-import { BookingFormData, VehicleOption } from "../types";
+import React, { useEffect, useMemo, useState } from "react";
+import { BookingFormData, VehicleOption, VehicleType } from "../types";
 import TextInput from "./TextInput";
 import DateTimePicker from "./DateTimePicker";
 import VehicleSelector from "./VehicleSelector";
 import Button from "./Button";
 import { loadGoogleMaps } from "../lib/googleMaps";
+
+/* NEW: imports for pricing */
+import { computePrice, DEFAULT_PRICING_CONFIG } from "../lib/pricing";
+import { getRouteMetricsKmMin } from "../lib/routeMetrics";
 
 /* ----------------------------- Types/Props ----------------------------- */
 interface BookingFormProps {
@@ -82,7 +86,6 @@ const AddressField: React.FC<AddressFieldProps> = ({
   required,
 }) => {
   // Show only the first line (place "name") in the text overlay.
-  // If there is no name, it will just show the address line.
   const displayText = value.includes("\n") ? value.split("\n")[0] : value;
 
   return (
@@ -161,6 +164,65 @@ const BookingForm: React.FC<BookingFormProps> = ({
     });
   }, [onInputChange]);
 
+  /* ------------------ NEW: compute Upfront totals for each vehicle ------------------ */
+  const [distanceKm, setDistanceKm] = useState(0);
+  const [durationMin, setDurationMin] = useState(0);
+
+  useEffect(() => {
+    (async () => {
+      setDistanceKm(0);
+      setDurationMin(0);
+      if (!bookingDetails.pickupLocation || !bookingDetails.dropoffLocation) return;
+      try {
+        const r = await getRouteMetricsKmMin(bookingDetails.pickupLocation, bookingDetails.dropoffLocation);
+        setDistanceKm(r.distanceKm);
+        setDurationMin(r.durationMin);
+      } catch {
+        // keep zeros if no Distance Matrix
+      }
+    })();
+  }, [bookingDetails.pickupLocation, bookingDetails.dropoffLocation]);
+
+  const pickupDate = useMemo(
+    () => (bookingDetails.dateTime ? new Date(bookingDetails.dateTime) : null),
+    [bookingDetails.dateTime]
+  );
+
+  const bookingLeadHours = useMemo(() => {
+    if (!pickupDate) return 0;
+    const now = new Date();
+    return Math.max(0, (pickupDate.getTime() - now.getTime()) / (1000 * 60 * 60));
+  }, [pickupDate]);
+
+  const applyAirportFee = useMemo(() => {
+    const test = (s?: string) => !!s && /airport|sea\-tac|seatac/i.test(s);
+    return test(bookingDetails.pickupLocation) || test(bookingDetails.dropoffLocation);
+  }, [bookingDetails.pickupLocation, bookingDetails.dropoffLocation]);
+
+  const upfrontTotalsByVehicle: Partial<Record<VehicleType, { total: number; currency: string; airportFee: number }>> =
+    useMemo(() => {
+      if (!pickupDate) return {};
+      const base = {
+        distanceKm,
+        durationMin,
+        pickupDate,
+        bookingLeadHours,
+        tolls: 0,
+        tipPercent: 0,
+        waitMinutes: 0,
+        applyAirportFee,
+      };
+      const out: Partial<Record<VehicleType, { total: number; currency: string; airportFee: number }>> = {};
+      (Object.values(VehicleType) as VehicleType[]).forEach((vt) => {
+        const b = computePrice({ ...base, vehicleType: vt }, DEFAULT_PRICING_CONFIG);
+        out[vt] = { total: b.total, currency: b.currency, airportFee: b.airportFee };
+      });
+      return out;
+    }, [distanceKm, durationMin, pickupDate, bookingLeadHours, applyAirportFee]);
+
+  const taxPercentLabel = `${Math.round(DEFAULT_PRICING_CONFIG.taxRate * 100)}%`;
+  /* ---------------------------------------------------------------------- */
+
   return (
     <div className="bg-brand-surface p-6 sm:p-8 rounded-lg shadow-xl">
       <h2 className="text-2xl font-semibold text-brand-text mb-4 border-b pb-3 border-slate-200">
@@ -207,6 +269,10 @@ const BookingForm: React.FC<BookingFormProps> = ({
             options={vehicleOptions}
             selectedVehicle={bookingDetails.vehicleType}
             onSelect={onVehicleSelect}
+            /* NEW: just data props, no layout change */
+            upfrontTotalsByVehicle={upfrontTotalsByVehicle}
+            applyAirportFee={applyAirportFee}
+            taxPercentLabel={taxPercentLabel}
           />
         </div>
 

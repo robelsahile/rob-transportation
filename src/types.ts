@@ -14,6 +14,26 @@ export interface VehicleOption {
   price?: number; // if you plan to show prices later
 }
 
+// Add these types
+export type PricingSnapshot = {
+  currency: string;
+  total: number;
+  baseFare: number;
+  distanceFee: number;
+  timeFee: number;
+  pickupTimeMultiplier: number;
+  leadTimeMultiplier: number;
+  waitFee: number;
+  tolls: number;
+  airportFee: number;
+  preTaxSubtotal: number;
+  tax: number;
+  tip: number;
+  // Optional trip metrics for Admin display
+  distanceMi?: number;
+  durationMin?: number;
+};
+
 // Full booking record stored in admin/dashboard
 export interface BookingData {
   id: string;
@@ -26,6 +46,7 @@ export interface BookingData {
   phone: string;
   email: string;
   flightNumber?: string; // optional
+  pricing?: PricingSnapshot;
 }
 
 // For form use (before saving)

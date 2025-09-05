@@ -78,25 +78,30 @@ export default function App() {
 
   // Confirm -> save booking and go to Admin
   const handleConfirmBooking = useCallback(() => {
-    const newBooking: BookingData = {
-      id: crypto.randomUUID(),
-      created_at: new Date().toISOString(),
-      pickupLocation: bookingDetails.pickupLocation,
-      dropoffLocation: bookingDetails.dropoffLocation,
-      dateTime: bookingDetails.dateTime,
-      vehicleType:
-        bookingDetails.vehicleType ?? VehicleType.SEDAN, // fallback
-      name: bookingDetails.name,
-      phone: bookingDetails.phone,
-      email: bookingDetails.email,
-      flightNumber: bookingDetails.flightNumber?.trim()
-        ? bookingDetails.flightNumber
-        : undefined,
-    };
+  const pricing = (window as any).__lastPricing; // <-- get snapshot from ReviewBooking
 
-    setBookings((prev) => [newBooking, ...prev]);
-    setView("admin");
-  }, [bookingDetails]);
+  const newBooking: BookingData = {
+    id: crypto.randomUUID(),
+    created_at: new Date().toISOString(),
+    pickupLocation: bookingDetails.pickupLocation,
+    dropoffLocation: bookingDetails.dropoffLocation,
+    dateTime: bookingDetails.dateTime,
+    vehicleType: bookingDetails.vehicleType ?? VehicleType.SEDAN,
+    name: bookingDetails.name,
+    phone: bookingDetails.phone,
+    email: bookingDetails.email,
+    flightNumber: bookingDetails.flightNumber?.trim()
+      ? bookingDetails.flightNumber
+      : undefined,
+
+    // ✅ attach pricing so AdminDashboard can show details
+    pricing,
+  };
+
+  setBookings((prev) => [newBooking, ...prev]);
+  setView("admin");
+}, [bookingDetails]);
+
 
   // Footer link -> open Admin
   const handleNavigateToAdmin = useCallback(() => {
