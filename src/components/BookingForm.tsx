@@ -52,7 +52,7 @@ const PlaneIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
   </svg>
 );
 
-/* ---------------- Name+Address storage + name-only display in inputs --------------- */
+/* ---------------- Name+Address storage + show only the name in inputs --------------- */
 function formatPlaceDisplay(place: google.maps.places.PlaceResult, fallback: string) {
   const name = place.name?.trim();
   const addr = place.formatted_address?.trim();
@@ -69,7 +69,7 @@ function formatPlaceDisplay(place: google.maps.places.PlaceResult, fallback: str
 type AddressFieldProps = {
   label: string;
   name: "pickupLocation" | "dropoffLocation";
-  value: string;
+  value: string; // RAW value in state (may be "name\naddress")
   placeholder: string;
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   Icon: React.FC<React.SVGProps<SVGSVGElement>>;
@@ -85,8 +85,9 @@ const AddressField: React.FC<AddressFieldProps> = ({
   Icon,
   required,
 }) => {
-  // Show only the first line (place "name") in the text overlay.
+  // Display only the first line in the input (avoid overlay/caret mismatch)
   const displayText = value.includes("\n") ? value.split("\n")[0] : value;
+  const fullTitle = value.includes("\n") ? value.replace("\n", " — ") : value;
 
   return (
     <label className="block">
@@ -94,26 +95,21 @@ const AddressField: React.FC<AddressFieldProps> = ({
         {label} {required && <span className="text-red-500">*</span>}
       </span>
       <div className="relative mt-1">
-        <input
-          name={name}
-          value={value}
-          onChange={onChange}
-          autoComplete="off"
-          required={required}
-          className="w-full h-12 rounded-md border border-slate-400 bg-white pl-10 pr-3
-                     text-transparent caret-brand-primary placeholder-transparent
-                     focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"
-          placeholder={placeholder}
-        />
         <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
           <Icon className="h-5 w-5 text-slate-500" />
         </div>
-        {/* Overlay that shows ONLY the name (first line) if present */}
-        <div className="absolute inset-0 flex items-center rounded-md pl-10 pr-3 pointer-events-none">
-          <div className={`truncate text-sm ${value ? "text-brand-text" : "text-slate-400"}`}>
-            {value ? displayText : placeholder}
-          </div>
-        </div>
+        <input
+          name={name}
+          value={displayText}
+          onChange={onChange}
+          autoComplete="off"
+          required={required}
+          title={fullTitle || undefined}
+          className="w-full h-12 rounded-md border border-slate-400 bg-white pl-10 pr-3
+                     text-brand-text placeholder-slate-400
+                     focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"
+          placeholder={placeholder}
+        />
       </div>
     </label>
   );
