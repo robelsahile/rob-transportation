@@ -40,10 +40,9 @@ export default function ReviewBooking({ data, onEdit, onConfirm }: Props) {
   // Adjustments (only tip is user-editable now)
   const [tipPercent, setTipPercent] = useState<number>(0);
 
-  // Kept in state for pricing, but no longer editable here
-  const [tolls, _setTolls] = useState<number>(0);
-  const [waitMinutes, _setWaitMinutes] = useState<number>(0);
-
+  // Not editable here – fixed values (still passed into pricing)
+  const tolls = 0;
+  const waitMinutes = 0;
 
   // Distance & duration
   const [distanceKm, setDistanceKm] = useState<number>(0);
@@ -265,89 +264,110 @@ export default function ReviewBooking({ data, onEdit, onConfirm }: Props) {
 
             {/* Trip metrics */}
             <div className="mt-2 text-sm text-slate-700">
-              <div className="flex justify-between">
+              <div className="flex items-center">
                 <span>Distance</span>
+                <span aria-hidden className="flex-1 mx-2 border-b border-dotted border-slate-300"></span>
                 <span>{miles.toFixed(1)} mi</span>
               </div>
-              <div className="flex justify-between">
+              <div className="flex items-center">
                 <span>Estimated duration</span>
+                <span aria-hidden className="flex-1 mx-2 border-b border-dotted border-slate-300"></span>
                 <span>{Math.round(durationMin)} min</span>
               </div>
             </div>
 
-            {/* Calculation details */}
+            {/* Calculation details — with dotted leaders */}
             <ul className="mt-3 text-sm text-slate-600 space-y-1">
-              <li className="flex justify-between">
+              <li className="flex items-center">
                 <span>Base fare</span>
+                <span aria-hidden className="flex-1 mx-2 border-b border-dotted border-slate-300"></span>
                 <span>${breakdown.baseFare.toFixed(2)}</span>
               </li>
 
               {vehicleCfg && (
-                <li className="flex justify-between">
+                <li className="flex items-center">
                   <span>
                     Distance: {miles.toFixed(1)} mi × ${vehicleCfg.perMile.toFixed(2)} /mi
                   </span>
+                  <span aria-hidden className="flex-1 mx-2 border-b border-dotted border-slate-300"></span>
                   <span>${breakdown.distanceFee.toFixed(2)}</span>
                 </li>
               )}
 
               {vehicleCfg && (
-                <li className="flex justify-between">
+                <li className="flex items-center">
                   <span>
                     Time: {Math.round(durationMin)} min × ${vehicleCfg.perMinute.toFixed(2)} /min
                   </span>
+                  <span aria-hidden className="flex-1 mx-2 border-b border-dotted border-slate-300"></span>
                   <span>${breakdown.timeFee.toFixed(2)}</span>
                 </li>
               )}
 
-              <li className="flex justify-between">
+              <li className="flex items-center">
                 <span>Subtotal (before multipliers)</span>
+                <span aria-hidden className="flex-1 mx-2 border-b border-dotted border-slate-300"></span>
                 <span>${round2(baseSubtotal).toFixed(2)}</span>
               </li>
 
-              <li className="flex justify-between">
+              <li className="flex items-center">
                 <span>Pickup-time multiplier</span>
+                <span aria-hidden className="flex-1 mx-2 border-b border-dotted border-slate-300"></span>
                 <span>×{breakdown.pickupTimeMultiplier.toFixed(2)}</span>
               </li>
-              <li className="flex justify-between">
+
+              <li className="flex items-center">
                 <span>Lead-time multiplier</span>
+                <span aria-hidden className="flex-1 mx-2 border-b border-dotted border-slate-300"></span>
                 <span>×{breakdown.leadTimeMultiplier.toFixed(2)}</span>
               </li>
-              <li className="flex justify-between">
+
+              <li className="flex items-center">
                 <span>After multipliers</span>
+                <span aria-hidden className="flex-1 mx-2 border-b border-dotted border-slate-300"></span>
                 <span>${round2(afterMultipliers).toFixed(2)}</span>
               </li>
 
-              <li className="flex justify-between">
+              <li className="flex items-center">
                 <span>Waiting time</span>
+                <span aria-hidden className="flex-1 mx-2 border-b border-dotted border-slate-300"></span>
                 <span>${breakdown.waitFee.toFixed(2)}</span>
               </li>
-              <li className="flex justify-between">
+
+              <li className="flex items-center">
                 <span>Tolls</span>
+                <span aria-hidden className="flex-1 mx-2 border-b border-dotted border-slate-300"></span>
                 <span>${breakdown.tolls.toFixed(2)}</span>
               </li>
-              <li className="flex justify-between">
+
+              <li className="flex items-center">
                 <span>Airport fee</span>
+                <span aria-hidden className="flex-1 mx-2 border-b border-dotted border-slate-300"></span>
                 <span>${breakdown.airportFee.toFixed(2)}</span>
               </li>
 
-              <li className="flex justify-between">
+              <li className="flex items-center">
                 <span>Pre-tax subtotal</span>
+                <span aria-hidden className="flex-1 mx-2 border-b border-dotted border-slate-300"></span>
                 <span>${breakdown.preTaxSubtotal.toFixed(2)}</span>
               </li>
 
-              <li className="flex justify-between">
+              <li className="flex items-center">
                 <span>Tax ({Math.round(DEFAULT_PRICING_CONFIG.taxRate * 100)}%)</span>
+                <span aria-hidden className="flex-1 mx-2 border-b border-dotted border-slate-300"></span>
                 <span>${breakdown.tax.toFixed(2)}</span>
               </li>
-              <li className="flex justify-between">
+
+              <li className="flex items-center">
                 <span>Tip ({tipPercent}%)</span>
+                <span aria-hidden className="flex-1 mx-2 border-b border-dotted border-slate-300"></span>
                 <span>${breakdown.tip.toFixed(2)}</span>
               </li>
 
               {breakdown.minFareApplied && (
-                <li className="text-xs text-amber-700 flex justify-between">
+                <li className="text-xs text-amber-700 flex items-center">
                   <span>Note</span>
+                  <span aria-hidden className="flex-1 mx-2 border-b border-dotted border-amber-300"></span>
                   <span>Minimum fare rule applied.</span>
                 </li>
               )}
@@ -355,7 +375,7 @@ export default function ReviewBooking({ data, onEdit, onConfirm }: Props) {
           </details>
         )}
 
-        {/* Adjustments — now ONLY Tip (%) */}
+        {/* Adjustments — ONLY Tip (%) */}
         <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-4">
           <h4 className="text-sm font-semibold text-brand-text mb-3">Adjustments</h4>
 
