@@ -10,36 +10,34 @@
         theme: {
           extend: {
             colors: {
-              "brand-primary": "#1E3A8A", // A deep blue
-              "brand-secondary": "#FBBF24", // A warm gold
-              "brand-text": "#1F2937", // Dark Gray
-              "brand-text-light": "#4B5563", // Medium Gray
-              "brand-bg": "#F3F4F6", // Light Gray background
-              "brand-surface": "#FFFFFF", // White for cards/surfaces
-            },
-          },
-        },
+              "brand-primary": "#1E3A8A",
+              "brand-secondary": "#FBBF24",
+              "brand-text": "#1F2937",
+              "brand-text-light": "#4B5563",
+              "brand-bg": "#F3F4F6",
+              "brand-surface": "#FFFFFF"
+            }
+          }
+        }
       };
     </script>
+
+    <!-- Remove React/ReactDOM/Vite from the import map to avoid a second React runtime -->
     <script type="importmap">
       {
         "imports": {
-          "react": "https://esm.sh/react@^19.1.0",
-          "react-dom/": "https://esm.sh/react-dom@^19.1.0/",
-          "react/": "https://esm.sh/react@^19.1.0/",
-          "vite": "https://esm.sh/vite@^7.0.5",
-          "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^4.7.0",
           "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@^2.52.0",
           "@google/genai": "https://esm.sh/@google/genai@^1.10.0"
         }
       }
     </script>
 
-    <!-- Sandbox (testing) -->
+    <!-- Square Sandbox SDK (keep this) -->
     <script
       type="text/javascript"
       src="https://sandbox.web.squarecdn.com/v1/square.js"
     ></script>
+    <!-- For production later: https://web.squarecdn.com/v1/square.js -->
 
     <link rel="stylesheet" href="/index.css" />
     <link rel="icon" type="image/x-icon" href="./public/favicon.ico" />

@@ -18,7 +18,11 @@ export default function PaymentPage({
   onPaid,
 }: PaymentPageProps) {
   const appId = import.meta.env.VITE_SQUARE_APPLICATION_ID as string;
-  const locationId = import.meta.env.VITE_SQUARE_LOCATION_ID as string;
+  const locationId = import_meta_env("VITE_SQUARE_LOCATION_ID") as string;
+
+  function import_meta_env(key: string) {
+    return (import.meta as any).env?.[key];
+  }
 
   const [error, setError] = useState<string | null>(null);
   const [paying, setPaying] = useState(false);
@@ -33,7 +37,6 @@ export default function PaymentPage({
   const googleRef = useRef<HTMLDivElement>(null);
   const cashAppRef = useRef<HTMLDivElement>(null);
 
-  // Use singletons on window to survive HMR/StrictMode
   const paymentsRef = useRef<any>(null);
   const cardInst = useRef<any>(null);
   const appleInst = useRef<any>(null);
@@ -42,91 +45,80 @@ export default function PaymentPage({
 
   const displayTotal = useMemo(() => `$${totalAmount.toFixed(2)}`, [totalAmount]);
 
-  const hasIframe = (el: HTMLDivElement | null) =>
+  const containerHasIframe = (el: HTMLDivElement | null) =>
     !!el && el.querySelector("iframe") !== null;
 
-  async function ensureAttached(instRef: React.MutableRefObject<any>, elRef: React.MutableRefObject<HTMLDivElement | null>) {
+  async function ensureAttached(
+    instRef: React.MutableRefObject<any>,
+    elRef: React.MutableRefObject<HTMLDivElement | null>
+  ) {
     if (!instRef.current || !elRef.current) return false;
-    if (!hasIframe(elRef.current)) {
+    if (!containerHasIframe(elRef.current)) {
       await instRef.current.attach(elRef.current);
-      // allow the iframe to render this frame
-      await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
     }
-    return hasIframe(elRef.current);
+    return containerHasIframe(elRef.current);
   }
 
   useEffect(() => {
     (async () => {
       setError(null);
       try {
-        if (!appId || !locationId) throw new Error("Missing Square Application or Location ID.");
+        if (!appId || !locationId) throw new Error("Missing Square Application or Location ID (.env.local).");
 
-        // 1) Get SDK from index.html
         const Square: any = (window as any).Square;
-        if (!Square?.payments) throw new Error("Square SDK not found on window. Hard-refresh and ensure the script tag is present.");
+        if (!Square?.payments) {
+          throw new Error('Square SDK not found. Ensure <script src="https://sandbox.web.squarecdn.com/v1/square.js"> is in index.html, then hard-refresh.');
+        }
 
-        // 2) payments singleton
         if (!(window as any).__sqPayments) {
           (window as any).__sqPayments = Square.payments(appId, locationId);
         }
         paymentsRef.current = (window as any).__sqPayments;
 
-        // 3) CARD instance (singleton)
-        if (!(window as any).__sqCard) {
-          (window as any).__sqCard = await paymentsRef.current.card();
+        // CARD
+        if (!cardInst.current) cardInst.current = await paymentsRef.current.card();
+        if (cardRef.current && !containerHasIframe(cardRef.current)) {
+          await cardInst.current.attach(cardRef.current);
         }
-        cardInst.current = (window as any).__sqCard;
-        if (cardRef.current) {
-          await ensureAttached(cardInst, cardRef);
-          setCardReady(hasIframe(cardRef.current));
-        }
+        setCardReady(!!containerHasIframe(cardRef.current));
 
-        // 4) APPLE PAY (if supported)
+        // APPLE
         try {
           const supported = await paymentsRef.current.applePay?.isSupported?.();
           if (supported) {
-            if (!(window as any).__sqApple) {
-              (window as any).__sqApple = await paymentsRef.current.applePay();
+            if (!appleInst.current) appleInst.current = await paymentsRef.current.applePay();
+            if (appleRef.current && !containerHasIframe(appleRef.current)) {
+              await appleInst.current.attach(appleRef.current);
             }
-            appleInst.current = (window as any).__sqApple;
-            if (appleRef.current) {
-              await ensureAttached(appleInst, appleRef);
-              setAppleReady(hasIframe(appleRef.current));
-            }
+            setAppleReady(!!containerHasIframe(appleRef.current));
           } else {
             setAppleReady(false);
           }
         } catch { setAppleReady(false); }
 
-        // 5) GOOGLE PAY (if supported)
+        // GOOGLE
         try {
           const supported = await paymentsRef.current.googlePay?.isSupported?.();
           if (supported) {
-            if (!(window as any).__sqGoogle) {
-              (window as any).__sqGoogle = await paymentsRef.current.googlePay();
+            if (!googleInst.current) googleInst.current = await paymentsRef.current.googlePay();
+            if (googleRef.current && !containerHasIframe(googleRef.current)) {
+              await googleInst.current.attach(googleRef.current);
             }
-            googleInst.current = (window as any).__sqGoogle;
-            if (googleRef.current) {
-              await ensureAttached(googleInst, googleRef);
-              setGoogleReady(hasIframe(googleRef.current));
-            }
+            setGoogleReady(!!containerHasIframe(googleRef.current));
           } else {
             setGoogleReady(false);
           }
         } catch { setGoogleReady(false); }
 
-        // 6) CASH APP PAY (if supported)
+        // CASH APP
         try {
           const supported = await paymentsRef.current.cashAppPay?.isSupported?.();
           if (supported) {
-            if (!(window as any).__sqCashApp) {
-              (window as any).__sqCashApp = await paymentsRef.current.cashAppPay();
+            if (!cashAppInst.current) cashAppInst.current = await paymentsRef.current.cashAppPay();
+            if (cashAppRef.current && !containerHasIframe(cashAppRef.current)) {
+              await cashAppInst.current.attach(cashAppRef.current);
             }
-            cashAppInst.current = (window as any).__sqCashApp;
-            if (cashAppRef.current) {
-              await ensureAttached(cashAppInst, cashAppRef);
-              setCashAppReady(hasIframe(cashAppRef.current));
-            }
+            setCashAppReady(!!containerHasIframe(cashAppRef.current));
           } else {
             setCashAppReady(false);
           }
@@ -135,7 +127,7 @@ export default function PaymentPage({
         setError(e?.message || "Failed to initialize payments");
       }
     })();
-    // no cleanup: keeping instances avoids duplicate attachments in dev
+    // no cleanup on dev reload to avoid detach/attach churn
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [appId, locationId]);
 
@@ -148,23 +140,27 @@ export default function PaymentPage({
         amount: Math.round(totalAmount * 100), // cents
         bookingId,
         customerName,
-        customerEmail,
-      }),
+        customerEmail
+      })
     });
     if (!res.ok) throw new Error(await res.text());
     const data = await res.json();
     return data.payment?.id as string;
   }
 
-  async function tokenizeAndPay(kind: "card" | "apple" | "google" | "cashapp") {
+  async function tokenizeAndPay(
+    kind: "card" | "apple" | "google" | "cashapp",
+    e?: React.MouseEvent
+  ) {
+    e?.preventDefault(); // <-- prevent form submission detaching the iframe
     setError(null);
     setPaying(true);
     try {
-      let inst: any;
+      let inst: any = null;
 
       if (kind === "card") {
         if (!cardInst.current) throw new Error("Card is not ready yet.");
-        const ok = await ensureAttached(cardInst, cardRef); // re-attach if HMR/StrictMode detached
+        const ok = await ensureAttached(cardInst, cardRef);
         if (!ok) throw new Error("Card is not attached yet.");
         inst = cardInst.current;
       } else if (kind === "apple") {
@@ -206,31 +202,29 @@ export default function PaymentPage({
         <span className="font-semibold">{displayTotal}</span>
       </p>
 
-      {error && (
-        <div className="mb-4 rounded-lg bg-red-50 text-red-700 p-3 text-sm">{error}</div>
-      )}
+      {error && <div className="mb-4 rounded-lg bg-red-50 text-red-700 p-3 text-sm">{error}</div>}
 
       <div className="grid gap-6">
         {/* Card */}
         <div>
           <div ref={cardRef} className="border rounded-2xl p-4" />
           <button
-            type="button"           // <-- add this
+            type="button"
             disabled={!cardReady || paying}
-            onClick={(e) => { e.preventDefault(); tokenizeAndPay("card"); }}
+            onClick={(e) => tokenizeAndPay("card", e)}
             className="mt-3 w-full rounded-2xl py-3 font-medium bg-black text-white disabled:opacity-50"
           >
             Pay {displayTotal}
-        </button>
-
+          </button>
         </div>
 
         {/* Apple Pay */}
         <div>
           <div ref={appleRef} />
           <button
+            type="button"
             disabled={!appleReady || paying}
-            onClick={() => tokenizeAndPay("apple")}
+            onClick={(e) => tokenizeAndPay("apple", e)}
             className="mt-2 w-full rounded-2xl py-3 font-medium border"
           >
             Apple Pay
@@ -241,8 +235,9 @@ export default function PaymentPage({
         <div>
           <div ref={googleRef} />
           <button
+            type="button"
             disabled={!googleReady || paying}
-            onClick={() => tokenizeAndPay("google")}
+            onClick={(e) => tokenizeAndPay("google", e)}
             className="mt-2 w-full rounded-2xl py-3 font-medium border"
           >
             Google Pay
@@ -253,8 +248,9 @@ export default function PaymentPage({
         <div>
           <div ref={cashAppRef} />
           <button
+            type="button"
             disabled={!cashAppReady || paying}
-            onClick={() => tokenizeAndPay("cashapp")}
+            onClick={(e) => tokenizeAndPay("cashapp", e)}
             className="mt-2 w-full rounded-2xl py-3 font-medium border"
           >
             Cash App Pay
