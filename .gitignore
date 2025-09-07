@@ -26,4 +26,7 @@ dist-ssr
 node_modules
 dist
 .env
-.env.local
+.env.localnode_modules/
+dist/
+.env*
+.vercel/
