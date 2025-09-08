@@ -1,8 +1,5 @@
 // api/create-payment.ts
 
-// Minimal Vercel/Node handler using the Web Fetch API.
-// Works on Vercel Node 18/20 and avoids SDK import/version issues.
-
 type Incoming = {
   sourceId?: string;       // token from Square Web Payments SDK
   amount?: number;         // in cents
@@ -12,19 +9,31 @@ type Incoming = {
 };
 
 export default async function handler(req: any, res: any) {
+  // 🔎 Backend ENV quick check via GET /api/create-payment?debug=1
+  if (req.method === "GET") {
+    const debug = (req.query?.debug ?? req.query?.DEBUG ?? "").toString();
+    if (debug === "1" || debug.toLowerCase() === "true") {
+      const out = {
+        token: (process.env.SQUARE_ACCESS_TOKEN || "").slice(0, 6) + (process.env.SQUARE_ACCESS_TOKEN ? "…" : ""),
+        env: process.env.SQUARE_ENV || "(missing)",
+        location: process.env.SQUARE_LOCATION_ID || "(missing)",
+      };
+      res.setHeader("Content-Type", "application/json");
+      res.statusCode = 200;
+      return res.end(JSON.stringify({ ok: true, backendEnv: out }));
+    }
+    res.statusCode = 405;
+    res.setHeader("Allow", "POST");
+    return res.end("Method Not Allowed");
+  }
+
   if (req.method !== "POST") {
     res.statusCode = 405;
     res.setHeader("Allow", "POST");
     return res.end("Method Not Allowed");
   }
 
-  // ✅ Step 4 (backend verification): log that envs are present
-  console.log("Square Backend Env", {
-    token: (process.env.SQUARE_ACCESS_TOKEN || "").slice(0, 6) + "...",
-    env: process.env.SQUARE_ENV,
-    location: process.env.SQUARE_LOCATION_ID,
-  });
-
+  // Normal POST handler continues:
   const {
     SQUARE_ACCESS_TOKEN,
     SQUARE_ENV,
@@ -55,7 +64,6 @@ export default async function handler(req: any, res: any) {
     return res.end("Missing required fields: sourceId (string), amount (number in cents).");
   }
 
-  // Unique idempotency key per attempt
   const idempotencyKey =
     (globalThis.crypto?.randomUUID?.() ??
       `${Date.now()}-${Math.random().toString(16).slice(2)}`) + `-${bookingId || "no-booking"}`;
@@ -68,7 +76,7 @@ export default async function handler(req: any, res: any) {
       currency: "USD",
     },
     location_id: SQUARE_LOCATION_ID,
-    autocomplete: true, // capture immediately
+    autocomplete: true,
     note: bookingId ? `ROB Transportation booking ${bookingId}` : "ROB Transportation payment",
     buyer_email_address: customerEmail || undefined,
   };
@@ -79,7 +87,7 @@ export default async function handler(req: any, res: any) {
       headers: {
         "Authorization": `Bearer ${SQUARE_ACCESS_TOKEN}`,
         "Content-Type": "application/json",
-        "Square-Version": "2024-08-21" // a recent stable version
+        "Square-Version": "2024-08-21"
       },
       body: JSON.stringify(payload),
     });
@@ -94,7 +102,6 @@ export default async function handler(req: any, res: any) {
       );
     }
 
-    // success
     res.setHeader("Content-Type", "application/json");
     res.statusCode = 200;
     return res.end(JSON.stringify({ payment: data.payment }));

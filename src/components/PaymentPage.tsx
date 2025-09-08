@@ -17,15 +17,13 @@ export default function PaymentPage({
   onBack,
   onPaid,
 }: PaymentPageProps) {
-  const appId = import.meta.env.VITE_SQUARE_APPLICATION_ID as string;
-  const locationId = import_meta_env("VITE_SQUARE_LOCATION_ID") as string;
+  const appId = import.meta.env.VITE_SQUARE_APPLICATION_ID as string | undefined;
+  const locationId = import_meta_env("VITE_SQUARE_LOCATION_ID") as string | undefined;
+  const env = import.meta.env.VITE_SQUARE_ENV as string | undefined;
 
-  // ✅ Step 4 (frontend verification): log the envs
-  console.log("Square Frontend Env", {
-    appId,
-    locationId,
-    env: import.meta.env.VITE_SQUARE_ENV,
-  });
+  // 🔎 Frontend ENV: visible + console
+  const mask = (v?: string) => (v ? v.slice(0, 6) + "…" : "(missing)");
+  console.log("Square Frontend Env", { appId, locationId, env });
 
   function import_meta_env(key: string) {
     return (import.meta as any).env?.[key];
@@ -70,7 +68,9 @@ export default function PaymentPage({
     (async () => {
       setError(null);
       try {
-        if (!appId || !locationId) throw new Error("Missing Square Application or Location ID (.env.local).");
+        if (!appId || !locationId) {
+          throw new Error("Missing Square Application or Location ID (.env.local / Vercel env).");
+        }
 
         const Square: any = (window as any).Square;
         if (!Square?.payments) {
@@ -134,7 +134,6 @@ export default function PaymentPage({
         setError(e?.message || "Failed to initialize payments");
       }
     })();
-    // no cleanup on dev reload to avoid detach/attach churn
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [appId, locationId]);
 
@@ -262,6 +261,16 @@ export default function PaymentPage({
           >
             Cash App Pay
           </button>
+        </div>
+      </div>
+
+      {/* 🔎 Tiny debug footer (remove later) */}
+      <div className="mt-6 text-xs text-gray-500">
+        <div className="inline-block rounded-lg border px-3 py-2 bg-white">
+          <div><strong>ENV (frontend)</strong></div>
+          <div>VITE_SQUARE_APPLICATION_ID: {mask(appId)}</div>
+          <div>VITE_SQUARE_LOCATION_ID: {mask(locationId)}</div>
+          <div>VITE_SQUARE_ENV: {env || "(missing)"}</div>
         </div>
       </div>
 
