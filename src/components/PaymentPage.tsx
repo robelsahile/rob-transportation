@@ -20,6 +20,13 @@ export default function PaymentPage({
   const appId = import.meta.env.VITE_SQUARE_APPLICATION_ID as string;
   const locationId = import_meta_env("VITE_SQUARE_LOCATION_ID") as string;
 
+  // ✅ Step 4 (frontend verification): log the envs
+  console.log("Square Frontend Env", {
+    appId,
+    locationId,
+    env: import.meta.env.VITE_SQUARE_ENV,
+  });
+
   function import_meta_env(key: string) {
     return (import.meta as any).env?.[key];
   }
@@ -152,7 +159,7 @@ export default function PaymentPage({
     kind: "card" | "apple" | "google" | "cashapp",
     e?: React.MouseEvent
   ) {
-    e?.preventDefault(); // <-- prevent form submission detaching the iframe
+    e?.preventDefault(); // stop any parent <form> submit
     setError(null);
     setPaying(true);
     try {
