@@ -1,9 +1,11 @@
-import { useCallback, useMemo, useState } from "react";
+// App.tsx
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
 import BookingForm from "./components/BookingForm";
 import ReviewBooking from "./components/ReviewBooking";
 import AdminDashboard from "./components/AdminDashboard";
+import AdminLogin from "./components/AdminLogin";
 import PaymentPage from "./components/PaymentPage";
 import PaymentSuccess from "./components/PaymentSuccess";
 import { VEHICLE_OPTIONS } from "./constants";
@@ -32,13 +34,19 @@ export default function App() {
   const [bookingDetails, setBookingDetails] =
     useState<BookingFormData>(initialBooking);
 
-  // simple in-memory “DB” of bookings so Admin can show something
+  // in-memory list so Admin has something to show
   const [bookings, setBookings] = useState<BookingData[]>([]);
+  const [isLoadingBookings, setIsLoadingBookings] = useState(false);
 
-  // NEW: state for payments flow
+  // payments flow
   const [lastTotal, setLastTotal] = useState<number>(0);
   const [bookingId, setBookingId] = useState<string>("");
   const [paymentId, setPaymentId] = useState<string>("");
+
+  // admin auth state (persisted via localStorage set by AdminLogin)
+  const [isAuthed, setIsAuthed] = useState<boolean>(
+    () => localStorage.getItem("rob_admin_authed") === "1"
+  );
 
   const vehicleOptions: VehicleOption[] = useMemo(() => VEHICLE_OPTIONS, []);
 
@@ -54,10 +62,16 @@ export default function App() {
     setBookingDetails((prev) => ({ ...prev, vehicleType: vehicle.id }));
   }, []);
 
-  // Go to review page after validating required fields
   const handleSubmit = useCallback(() => {
-    const { pickupLocation, dropoffLocation, dateTime, vehicleType, name, phone, email } =
-      bookingDetails;
+    const {
+      pickupLocation,
+      dropoffLocation,
+      dateTime,
+      vehicleType,
+      name,
+      phone,
+      email,
+    } = bookingDetails;
 
     if (
       !pickupLocation ||
@@ -83,11 +97,8 @@ export default function App() {
     setView("review");
   }, [bookingDetails]);
 
-  // ✅ Keep ReviewBooking's onConfirm() signature (no args)
-  //    Read the total from the pricing snapshot it already places on window.__lastPricing
   const handleConfirmFromReview = useCallback(() => {
     const pricing = (window as any)?.__lastPricing || {};
-    // Try common fields your pricing object may have:
     const total =
       typeof pricing.total === "number"
         ? pricing.total
@@ -105,7 +116,6 @@ export default function App() {
     setView("payment");
   }, []);
 
-  // Save booking (called after successful payment)
   const handleSaveBooking = useCallback(
     (pricing: any) => {
       const newBooking: BookingData = {
@@ -123,21 +133,101 @@ export default function App() {
           : undefined,
         pricing,
       };
-
       setBookings((prev) => [newBooking, ...prev]);
     },
     [bookingDetails]
   );
 
-  // Footer link -> open Admin
   const handleNavigateToAdmin = useCallback(() => {
     setView("admin");
   }, []);
 
-  // Admin “New Booking” -> back to form
   const handleNavigateToCustomer = useCallback(() => {
     setView("form");
   }, []);
+
+  const handleLogout = useCallback(() => {
+    localStorage.removeItem("rob_admin_authed");
+    setIsAuthed(false);
+    setView("form");
+  }, []);
+
+  // --------------------------
+  // STEP 4: SAVE TO DB (POST)
+  // --------------------------
+  const postBookingToApi = useCallback(
+    async (pricing: any) => {
+      try {
+        const payload = {
+          pickupLocation: bookingDetails.pickupLocation,
+          dropoffLocation: bookingDetails.dropoffLocation,
+          dateTime: bookingDetails.dateTime,
+          vehicleType: bookingDetails.vehicleType ?? VehicleType.SEDAN,
+          name: bookingDetails.name,
+          phone: bookingDetails.phone,
+          email: bookingDetails.email,
+          flightNumber: bookingDetails.flightNumber?.trim() || null,
+          pricing,
+        };
+
+        await fetch("/api/bookings", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+      } catch (err) {
+        console.error("Failed to persist booking:", err);
+        // Optional: show a toast or fallback UI
+      }
+    },
+    [bookingDetails]
+  );
+
+  // --------------------------------------------
+  // Hook POST into your existing payment success
+  // --------------------------------------------
+  const handlePaymentSuccess = useCallback(
+    (pid: string) => {
+      setPaymentId(pid);
+      const pricing = (window as any)?.__lastPricing;
+
+      // Persist to DB (fire-and-forget)
+      if (pricing) postBookingToApi(pricing);
+
+      // Keep your in-memory list too (useful for immediate UI)
+      if (pricing) handleSaveBooking(pricing);
+
+      setView("success");
+    },
+    [handleSaveBooking, postBookingToApi]
+  );
+
+  // --------------------------------
+  // STEP 5: LOAD FROM DB (Admin GET)
+  // --------------------------------
+  useEffect(() => {
+    const ADMIN_TOKEN = import.meta.env.VITE_ADMIN_API_TOKEN as string | undefined;
+
+    if (view !== "admin" || !isAuthed) return;
+
+    (async () => {
+      setIsLoadingBookings(true);
+      try {
+        const res = await fetch("/api/bookings", {
+          headers: {
+            Authorization: `Bearer ${ADMIN_TOKEN ?? ""}`,
+          },
+        });
+        if (!res.ok) throw new Error(`Failed to load bookings (${res.status})`);
+        const json = await res.json();
+        setBookings(json.bookings || []);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setIsLoadingBookings(false);
+      }
+    })();
+  }, [view, isAuthed]);
 
   return (
     <div className="min-h-screen flex flex-col bg-brand-bg text-brand-text">
@@ -158,7 +248,6 @@ export default function App() {
           <ReviewBooking
             data={bookingDetails}
             onEdit={() => setView("form")}
-            // ⬇️ no-arg handler expected by your current ReviewBooking Props
             onConfirm={handleConfirmFromReview}
           />
         )}
@@ -170,13 +259,7 @@ export default function App() {
             customerName={`${bookingDetails.name}`.trim()}
             customerEmail={bookingDetails.email}
             onBack={() => setView("review")}
-            onPaid={(pid) => {
-              setPaymentId(pid);
-              // store the pricing snapshot captured on review
-              const pricing = (window as any)?.__lastPricing;
-              if (pricing) handleSaveBooking(pricing);
-              setView("success");
-            }}
+            onPaid={handlePaymentSuccess}
           />
         )}
 
@@ -188,11 +271,31 @@ export default function App() {
         )}
 
         {view === "admin" && (
-          <AdminDashboard
-            bookings={bookings}
-            onNavigateToCustomer={handleNavigateToCustomer}
-            isLoading={false}
-          />
+          isAuthed ? (
+            <div className="space-y-4">
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  className="text-sm underline underline-offset-4 hover:opacity-80"
+                >
+                  Log out
+                </button>
+              </div>
+              <AdminDashboard
+                bookings={bookings}
+                onNavigateToCustomer={handleNavigateToCustomer}
+                isLoading={isLoadingBookings}
+              />
+            </div>
+          ) : (
+            <AdminLogin
+              onSuccess={() => {
+                setIsAuthed(true);
+                setView("admin");
+              }}
+            />
+          )
         )}
       </main>
 
