@@ -6,17 +6,13 @@ type PaymentPageProps = {
   customerName?: string;
   customerEmail?: string;
   onBack: () => void;
-  onPaid: (paymentId: string) => void; // not used during redirect flow; kept for later
+  onPaid: (paymentId: string) => void; // kept for future, not used in hosted checkout
 };
 
-const PaymentPage: React.FC<PaymentPageProps> = ({
-  bookingId,
-  totalAmount,
-  customerName,
-  customerEmail,
-  onBack,
-  onPaid,
-}: PaymentPageProps) => {
+const PaymentPage: React.FC<PaymentPageProps> = (props) => {
+  // Note: we intentionally do NOT destructure `onPaid` because we don't use it in Hosted Checkout
+  const { bookingId, totalAmount, customerName, customerEmail, onBack } = props;
+
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<boolean>(false);
 
@@ -43,9 +39,7 @@ const PaymentPage: React.FC<PaymentPageProps> = ({
         }),
       });
 
-      if (!resp.ok) {
-        throw new Error(await resp.text());
-      }
+      if (!resp.ok) throw new Error(await resp.text());
       const data = await resp.json();
       const url = data?.url as string | undefined;
       if (!url) throw new Error("No payment link returned.");
@@ -68,9 +62,17 @@ const PaymentPage: React.FC<PaymentPageProps> = ({
       </p>
 
       <div className="mt-2 text-sm text-gray-500">
-        <div>Name: <span className="font-medium">{customerName || "Guest"}</span></div>
-        <div>Email: <span className="font-medium">{customerEmail || "N/A"}</span></div>
-        {bookingId && <div>Booking ID: <span className="font-mono">{bookingId}</span></div>}
+        <div>
+          Name: <span className="font-medium">{customerName || "Guest"}</span>
+        </div>
+        <div>
+          Email: <span className="font-medium">{customerEmail || "N/A"}</span>
+        </div>
+        {bookingId && (
+          <div>
+            Booking ID: <span className="font-mono">{bookingId}</span>
+          </div>
+        )}
       </div>
 
       {error && (
@@ -93,7 +95,8 @@ const PaymentPage: React.FC<PaymentPageProps> = ({
       </div>
 
       <p className="mt-4 text-xs text-gray-400">
-        * You’ll be redirected to Square’s secure checkout. After payment you’ll come back here.
+        * You’ll be redirected to Square’s secure checkout. After payment you’ll
+        come back here.
       </p>
     </div>
   );
