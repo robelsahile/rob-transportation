@@ -1,3 +1,4 @@
+// components/DateTimePicker.tsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
 
 type Props = {
@@ -66,6 +67,8 @@ type WheelProps = {
   initial: string;                  // "HH:mm" 24h
   onConfirm: (val: string) => void; // returns "HH:mm"
   onClose: () => void;
+  /** If set, restrict selectable time to >= this time (same day as chosen date) */
+  minTimeForSelectedDate?: { h24: number; m: number } | null;
 };
 
 /** Change this to 5, 10, 15 to control minute increments */
@@ -86,15 +89,35 @@ function to24(hour12: number, minute: number, am: boolean) {
   return `${pad(h)}:${pad(minute)}`;
 }
 
-const TimeWheel: React.FC<WheelProps> = ({ initial, onConfirm, onClose }) => {
+/** Return true if (h12, m, am) is >= the given min (in 24h) */
+function isAtOrAfter(h12: number, m: number, am: boolean, min?: { h24: number; m: number } | null) {
+  if (!min) return true;
+  const h24 = (h12 % 12) + (am ? 0 : 12);
+  if (h24 > min.h24) return true;
+  if (h24 < min.h24) return false;
+  return m >= min.m;
+}
+
+const TimeWheel: React.FC<WheelProps> = ({ initial, onConfirm, onClose, minTimeForSelectedDate }) => {
+  // Start from initial time, but if it's before min, bump it up to min (rounded to TIME_STEP)
   const { hour12, minute, am } = to12(initial);
 
-  // Floor to nearest step; change to nearest if you prefer:
-  // const nearest = Math.round(minute / TIME_STEP) * TIME_STEP;
-  // const [m, setM] = useState<number>(nearest % 60);
-  const [h, setH] = useState<number>(hour12);
-  const [m, setM] = useState<number>(minute - (minute % TIME_STEP));
-  const [isAM, setIsAM] = useState<boolean>(am);
+  const clampToMin = (h12: number, m: number, isAM: boolean) => {
+    if (!minTimeForSelectedDate) return { h12, m, isAM };
+    const h24 = (h12 % 12) + (isAM ? 0 : 12);
+    const min = minTimeForSelectedDate;
+    if (h24 > min.h24 || (h24 === min.h24 && m >= min.m)) return { h12, m, isAM };
+    // convert min back to 12h
+    const isMinAM = min.h24 < 12;
+    let minH12 = min.h24 % 12;
+    if (minH12 === 0) minH12 = 12;
+    return { h12: minH12, m: min.m, isAM: isMinAM };
+  };
+
+  const start = clampToMin(hour12, minute - (minute % TIME_STEP), am);
+  const [h, setH] = useState<number>(start.h12);
+  const [m, setM] = useState<number>(start.m);
+  const [isAM, setIsAM] = useState<boolean>(start.isAM);
 
   const hours = useMemo(() => Array.from({ length: 12 }, (_, i) => i + 1), []);
   const minutes = useMemo(
@@ -102,10 +125,83 @@ const TimeWheel: React.FC<WheelProps> = ({ initial, onConfirm, onClose }) => {
     []
   );
 
-  // Confirm button styled to match site brand color
+  // If no times left today, show message and disable confirm
+  const noTimesAvailable =
+    !!minTimeForSelectedDate && minTimeForSelectedDate.h24 >= 24;
+
   const confirmBtn =
     "w-full py-2 rounded-2xl font-semibold text-white bg-brand-primary hover:bg-brand-primary/90 " +
     "shadow-sm focus:outline-none focus:ring-2 focus:ring-brand-primary focus:ring-offset-1";
+
+  const disabledBtn =
+    "w-full py-2 rounded-2xl font-semibold text-white bg-slate-300 cursor-not-allowed";
+
+  const handlePickHour = (hh: number) => {
+    // If the chosen hour makes current (m, isAM) invalid, auto-bump minute/AMPM
+    let nextAM = isAM;
+    let nextM = m;
+    let nextH = hh;
+
+    // If AM/PM state makes the selection invalid relative to min, try to keep it valid
+    if (!isAtOrAfter(nextH, nextM, nextAM, minTimeForSelectedDate)) {
+      // Try bump minutes to min if same hour
+      if (minTimeForSelectedDate) {
+        const min = minTimeForSelectedDate;
+        const targetAM = min.h24 < 12;
+        let minH12 = min.h24 % 12;
+        if (minH12 === 0) minH12 = 12;
+        if (hh < minH12 || (hh === minH12 && (isAM !== targetAM || nextM < min.m))) {
+          nextH = minH12;
+          nextAM = targetAM;
+          nextM = Math.max(nextM, min.m - (min.m % TIME_STEP));
+        }
+      }
+    }
+    setH(nextH);
+    setIsAM(nextAM);
+    setM(nextM);
+  };
+
+  const handlePickMinute = (mm: number) => {
+    let nextM = mm;
+    let nextH = h;
+    let nextAM = isAM;
+    if (!isAtOrAfter(nextH, nextM, nextAM, minTimeForSelectedDate) && minTimeForSelectedDate) {
+      const min = minTimeForSelectedDate;
+      const targetAM = min.h24 < 12;
+      let minH12 = min.h24 % 12;
+      if (minH12 === 0) minH12 = 12;
+      nextH = minH12;
+      nextAM = targetAM;
+      nextM = min.m;
+    }
+    setM(nextM);
+    setH(nextH);
+    setIsAM(nextAM);
+  };
+
+  const handlePickAMPM = (wantAM: boolean) => {
+    let nextAM = wantAM;
+    let nextH = h;
+    let nextM = m;
+    if (!isAtOrAfter(nextH, nextM, nextAM, minTimeForSelectedDate) && minTimeForSelectedDate) {
+      const min = minTimeForSelectedDate;
+      const targetAM = min.h24 < 12;
+      let minH12 = min.h24 % 12;
+      if (minH12 === 0) minH12 = 12;
+      nextAM = targetAM;
+      nextH = minH12;
+      nextM = min.m;
+    }
+    setIsAM(nextAM);
+    setH(nextH);
+    setM(nextM);
+  };
+
+  const hourDisabled = (hh: number) => !isAtOrAfter(hh, 0, isAM, minTimeForSelectedDate);
+  const minuteDisabled = (mm: number) => !isAtOrAfter(h, mm, isAM, minTimeForSelectedDate);
+  const amDisabled = !isAtOrAfter(h, m, true, minTimeForSelectedDate);
+  const pmDisabled = !isAtOrAfter(h, m, false, minTimeForSelectedDate);
 
   return (
     <div
@@ -119,53 +215,89 @@ const TimeWheel: React.FC<WheelProps> = ({ initial, onConfirm, onClose }) => {
         <div className="font-medium">AM/PM</div>
       </div>
 
-      <div className="grid grid-cols-3 gap-3">
-        {/* Hour */}
-        <div className="max-h-44 overflow-y-auto rounded-md border border-slate-200">
-          {hours.map((hh) => (
-            <button
-              key={hh}
-              type="button"
-              className={["w-full py-2 text-sm hover:bg-slate-100", h === hh ? "bg-slate-100 font-semibold" : ""].join(" ")}
-              onClick={() => setH(hh)}
-            >
-              {hh.toString().padStart(2, "0")}
-            </button>
-          ))}
+      {noTimesAvailable ? (
+        <div className="text-center text-sm text-slate-600 p-3">
+          No times remaining today. Please pick another date.
         </div>
+      ) : (
+        <div className="grid grid-cols-3 gap-3">
+          {/* Hour */}
+          <div className="max-h-44 overflow-y-auto rounded-md border border-slate-200">
+            {hours.map((hh) => {
+              const disabled = hourDisabled(hh);
+              return (
+                <button
+                  key={hh}
+                  type="button"
+                  className={[
+                    "w-full py-2 text-sm",
+                    disabled ? "opacity-40 cursor-not-allowed" : "hover:bg-slate-100",
+                    h === hh && !disabled ? "bg-slate-100 font-semibold" : ""
+                  ].join(" ")}
+                  onClick={() => !disabled && handlePickHour(hh)}
+                  disabled={disabled}
+                  tabIndex={disabled ? -1 : 0}
+                >
+                  {hh.toString().padStart(2, "0")}
+                </button>
+              );
+            })}
+          </div>
 
-        {/* Minute */}
-        <div className="max-h-44 overflow-y-auto rounded-md border border-slate-200">
-          {minutes.map((mm) => (
-            <button
-              key={mm}
-              type="button"
-              className={["w-full py-2 text-sm hover:bg-slate-100", m === mm ? "bg-slate-100 font-semibold" : ""].join(" ")}
-              onClick={() => setM(mm)}
-            >
-              {mm.toString().padStart(2, "0")}
-            </button>
-          ))}
-        </div>
+          {/* Minute */}
+          <div className="max-h-44 overflow-y-auto rounded-md border border-slate-200">
+            {minutes.map((mm) => {
+              const disabled = minuteDisabled(mm);
+              return (
+                <button
+                  key={mm}
+                  type="button"
+                  className={[
+                    "w-full py-2 text-sm",
+                    disabled ? "opacity-40 cursor-not-allowed" : "hover:bg-slate-100",
+                    m === mm && !disabled ? "bg-slate-100 font-semibold" : ""
+                  ].join(" ")}
+                  onClick={() => !disabled && handlePickMinute(mm)}
+                  disabled={disabled}
+                  tabIndex={disabled ? -1 : 0}
+                >
+                  {mm.toString().padStart(2, "0")}
+                </button>
+              );
+            })}
+          </div>
 
-        {/* AM / PM */}
-        <div className="rounded-md border border-slate-200 overflow-hidden">
-          <button
-            type="button"
-            className={["w-full py-2 text-sm hover:bg-slate-100", isAM ? "bg-slate-100 font-semibold" : ""].join(" ")}
-            onClick={() => setIsAM(true)}
-          >
-            AM
-          </button>
-          <button
-            type="button"
-            className={["w-full py-2 text-sm hover:bg-slate-100", !isAM ? "bg-slate-100 font-semibold" : ""].join(" ")}
-            onClick={() => setIsAM(false)}
-          >
-            PM
-          </button>
+          {/* AM / PM */}
+          <div className="rounded-md border border-slate-200 overflow-hidden">
+            <button
+              type="button"
+              className={[
+                "w-full py-2 text-sm",
+                amDisabled ? "opacity-40 cursor-not-allowed" : "hover:bg-slate-100",
+                isAM && !amDisabled ? "bg-slate-100 font-semibold" : ""
+              ].join(" ")}
+              onClick={() => !amDisabled && handlePickAMPM(true)}
+              disabled={amDisabled}
+              tabIndex={amDisabled ? -1 : 0}
+            >
+              AM
+            </button>
+            <button
+              type="button"
+              className={[
+                "w-full py-2 text-sm",
+                pmDisabled ? "opacity-40 cursor-not-allowed" : "hover:bg-slate-100",
+                !isAM && !pmDisabled ? "bg-slate-100 font-semibold" : ""
+              ].join(" ")}
+              onClick={() => !pmDisabled && handlePickAMPM(false)}
+              disabled={pmDisabled}
+              tabIndex={pmDisabled ? -1 : 0}
+            >
+              PM
+            </button>
+          </div>
         </div>
-      </div>
+      )}
 
       <div className="mt-4 flex gap-3">
         <button
@@ -177,8 +309,9 @@ const TimeWheel: React.FC<WheelProps> = ({ initial, onConfirm, onClose }) => {
         </button>
         <button
           type="button"
-          className={"flex-1 " + confirmBtn}
-          onClick={() => onConfirm(to24(h, m, isAM))}
+          className={noTimesAvailable ? disabledBtn : "flex-1 " + confirmBtn}
+          onClick={() => !noTimesAvailable && onConfirm(to24(h, m, isAM))}
+          disabled={noTimesAvailable}
         >
           Confirm
         </button>
@@ -191,8 +324,13 @@ const TimeWheel: React.FC<WheelProps> = ({ initial, onConfirm, onClose }) => {
 export default function DateTimePicker({ name, value, onChange, required }: Props) {
   const { date, time } = useMemo(() => splitValue(value), [value]);
 
-  // Use today's date for default label + open on current month
+  // Today's midnight for comparisons
   const today = useMemo(() => new Date(), []);
+  const todayMidnight = useMemo(
+    () => new Date(today.getFullYear(), today.getMonth(), today.getDate()),
+    [today]
+  );
+  const isPastDate = (d: Date) => d.getTime() < todayMidnight.getTime();
 
   const [openCal, setOpenCal] = useState(false);
   const [openTimes, setOpenTimes] = useState(false);
@@ -210,19 +348,28 @@ export default function DateTimePicker({ name, value, onChange, required }: Prop
     return () => document.removeEventListener("click", onDocClick);
   }, [openCal, openTimes]);
 
+  // Initial view: selected month if not in the past; else current month
   const initialView = useMemo(() => {
     if (date) {
-      const [y, m] = date.split("-").map((n) => parseInt(n, 10));
-      return new Date(y, (m ?? 1) - 1, 1);
+      const [y, m, dd] = date.split("-").map((n) => parseInt(n, 10));
+      const sel = new Date(y, (m ?? 1) - 1, dd ?? 1);
+      if (!isPastDate(sel)) return new Date(sel.getFullYear(), sel.getMonth(), 1);
     }
     return new Date(today.getFullYear(), today.getMonth(), 1);
-  }, [date, today]);
+  }, [date, todayMidnight]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const [viewYear, setViewYear] = useState<number>(initialView.getFullYear());
   const [viewMonth, setViewMonth] = useState<number>(initialView.getMonth());
   const days = useMemo(() => buildDays(viewYear, viewMonth), [viewYear, viewMonth]);
 
+  // Month navigation guards (disallow past months)
+  const monthIndex = (y: number, m: number) => y * 12 + m;
+  const currentMonthIndex = monthIndex(today.getFullYear(), today.getMonth());
+  const viewingMonthIndex = monthIndex(viewYear, viewMonth);
+  const prevDisabled = viewingMonthIndex <= currentMonthIndex;
+
   const goPrevMonth = () => {
+    if (prevDisabled) return;
     if (viewMonth === 0) {
       setViewYear((y) => y - 1);
       setViewMonth(11);
@@ -246,6 +393,7 @@ export default function DateTimePicker({ name, value, onChange, required }: Prop
   };
 
   const pickDate = (d: Date) => {
+    if (isPastDate(d)) return; // hard guard
     emit(isoFromDate(d), time);
     setOpenCal(false);
     setViewYear(d.getFullYear());
@@ -262,6 +410,29 @@ export default function DateTimePicker({ name, value, onChange, required }: Prop
     const [y, m, dd] = date.split("-").map((n) => parseInt(n, 10));
     return new Date(y, (m ?? 1) - 1, dd ?? 1);
   }, [date]);
+
+  // Compute min time when selected date is today: now rounded up to TIME_STEP
+  const minTimeForSelectedDate = useMemo(() => {
+    if (!selectedDateObj) return null;
+    if (!sameYMD(selectedDateObj, today)) return null;
+
+    const now = new Date();
+    const h = now.getHours();
+    const rawMin = now.getMinutes() + 1; // strictly after "now"
+    const stepMin = Math.ceil(rawMin / TIME_STEP) * TIME_STEP;
+    let h24 = h;
+    let m = stepMin;
+
+    if (m >= 60) {
+      h24 = h + 1;
+      m = 0;
+    }
+    if (h24 >= 24) {
+      // no times left today
+      return { h24: 24, m: 0 };
+    }
+    return { h24, m };
+  }, [selectedDateObj, today]);
 
   const weekdayLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
@@ -299,11 +470,26 @@ export default function DateTimePicker({ name, value, onChange, required }: Prop
             <div className="absolute z-40 mt-2 w-full rounded-lg border border-slate-200 bg-white shadow-xl p-3">
               {/* Header: month switcher */}
               <div className="flex items-center justify-between mb-2">
-                <button type="button" onClick={goPrevMonth} className="px-2 py-1 rounded hover:bg-slate-100" aria-label="Previous month">‹</button>
+                <button
+                  type="button"
+                  onClick={goPrevMonth}
+                  className={`px-2 py-1 rounded ${prevDisabled ? "opacity-40 cursor-not-allowed" : "hover:bg-slate-100"}`}
+                  aria-label="Previous month"
+                  disabled={prevDisabled}
+                >
+                  ‹
+                </button>
                 <div className="font-medium text-slate-700">
                   {new Date(viewYear, viewMonth, 1).toLocaleDateString(undefined, { month: "long", year: "numeric" })}
                 </div>
-                <button type="button" onClick={goNextMonth} className="px-2 py-1 rounded hover:bg-slate-100" aria-label="Next month">›</button>
+                <button
+                  type="button"
+                  onClick={goNextMonth}
+                  className="px-2 py-1 rounded hover:bg-slate-100"
+                  aria-label="Next month"
+                >
+                  ›
+                </button>
               </div>
 
               {/* Weekday labels */}
@@ -318,19 +504,32 @@ export default function DateTimePicker({ name, value, onChange, required }: Prop
                   const d = cell.date;
                   const selected = selectedDateObj ? sameYMD(d, selectedDateObj) : false;
                   const isToday = sameYMD(d, today);
+                  const past = isPastDate(d);
+
+                  const base =
+                    "h-9 rounded-md text-sm text-slate-800 flex items-center justify-center";
+                  const enabled =
+                    "hover:bg-slate-100";
+                  const selectedCls =
+                    "bg-slate-500 text-white hover:bg-slate-900";
+                  const disabledCls =
+                    "opacity-90 blur-[1px] cursor-not-allowed pointer-events-none";
 
                   return (
                     <button
                       key={cell.key}
                       type="button"
                       className={[
-                        "h-9 rounded-md text-sm hover:bg-slate-100 text-slate-800",
-                        selected ? "bg-slate-500 text-white hover:bg-slate-900" : ""
+                        base,
+                        past ? disabledCls : enabled,
+                        selected ? selectedCls : ""
                       ].join(" ")}
                       onClick={() => pickDate(d)}
+                      disabled={past}
+                      tabIndex={past ? -1 : 0}
                     >
                       {/* Subtle circle for today if not selected */}
-                      {isToday && !selected ? (
+                      {isToday && !selected && !past ? (
                         <span className="inline-flex w-7 h-7 items-center justify-center rounded-full bg-slate-300">
                           {d.getDate()}
                         </span>
@@ -375,6 +574,7 @@ export default function DateTimePicker({ name, value, onChange, required }: Prop
               initial={time || "00:00"}
               onConfirm={pickTime}
               onClose={() => setOpenTimes(false)}
+              minTimeForSelectedDate={minTimeForSelectedDate}
             />
           )}
         </div>
