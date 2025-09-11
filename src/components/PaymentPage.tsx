@@ -2,7 +2,7 @@ import React, { useMemo, useState } from "react";
 
 type PaymentPageProps = {
   bookingId: string;
-  totalAmount: number; // USD (pre-discount subtotal)
+  totalAmount: number; // USD
   customerName?: string;
   customerEmail?: string;
   onBack: () => void;
@@ -26,9 +26,9 @@ const PaymentPage: React.FC<PaymentPageProps> = (props) => {
         bookingId || ""
       )}`;
 
-      // Send ONLY the subtotal; Square's hosted page will handle coupon entry and apply it.
+      // Only send subtotal; Square will provide the coupon field in hosted checkout
       const body = {
-        amount: subtotalCents, // cents
+        amount: subtotalCents,
         bookingId,
         customerName,
         customerEmail,
@@ -84,7 +84,7 @@ const PaymentPage: React.FC<PaymentPageProps> = (props) => {
         )}
       </div>
 
-      {/* No on-site promo code field — coupons will be entered on Square's hosted page */}
+      {/* Promo box removed — Square will show "Add coupon" on checkout page */}
 
       {error && (
         <div className="mt-4 rounded-lg bg-red-50 text-red-700 p-3 text-sm">{error}</div>
@@ -107,7 +107,7 @@ const PaymentPage: React.FC<PaymentPageProps> = (props) => {
 
       <p className="mt-4 text-xs text-gray-400">
         * You’ll be redirected to Square’s secure checkout. After payment you’ll
-        come back here.
+        come back here. Discounts or coupon codes can be entered there.
       </p>
     </div>
   );
