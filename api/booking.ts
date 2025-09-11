@@ -1,79 +1,96 @@
-// api/bookings.ts
+// /api/bookings.ts
+import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { createClient } from "@supabase/supabase-js";
 
-const supabase = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE! // server-side only
-);
+const { SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, ADMIN_API_TOKEN } = process.env;
 
-function isAdmin(req: Request) {
-  const auth = req.headers.get("authorization") || "";
-  const token = auth.replace(/^Bearer\s+/i, "");
-  return token && token === process.env.ADMIN_API_TOKEN;
+if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+  throw new Error("Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY");
 }
 
-export const config = {
-  runtime: "edge",
-};
+const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+  auth: { persistSession: false },
+});
 
-export default async function handler(req: Request) {
+export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     if (req.method === "POST") {
-      const body = await req.json();
+      const {
+        bookingId, // custom id: YYYYMMDD-XXX-NNNN
+        pickupLocation,
+        dropoffLocation,
+        dateTime,
+        vehicleType,
+        name,
+        phone,
+        email,
+        flightNumber,
+        pricing,
+        appliedCouponCode,
+        discountCents,
+      } = req.body || {};
 
-      // Basic input normalization (matches your BookingData shape)
-      const record = {
-        pickup_location: body.pickupLocation,
-        dropoff_location: body.dropoffLocation,
-        date_time: body.dateTime,
-        vehicle_type: body.vehicleType,
-        name: body.name,
-        phone: body.phone,
-        email: body.email,
-        flight_number: body.flightNumber ?? null,
-        pricing: body.pricing ?? null,
-      };
-
-      const { error } = await supabase.from("bookings").insert(record);
-      if (error) {
-        return new Response(JSON.stringify({ error: error.message }), { status: 400 });
+      if (!bookingId || !pickupLocation || !dropoffLocation || !dateTime || !vehicleType || !name || !phone || !email) {
+        return res.status(400).json({ ok: false, error: "Missing required fields" });
       }
-      return new Response(JSON.stringify({ ok: true }), { status: 201 });
+
+      // Insert booking
+      const { error: insertErr } = await supabase.from("bookings").insert({
+        id: bookingId,
+        pickup_location: pickupLocation,
+        dropoff_location: dropoffLocation,
+        date_time: dateTime,
+        vehicle_type: String(vehicleType),
+        name,
+        phone,
+        email,
+        flight_number: flightNumber || null,
+        pricing: pricing ?? null,
+        applied_coupon_code: appliedCouponCode || null,
+        discount_cents: Number(discountCents || 0),
+      });
+
+      if (insertErr) {
+        console.error(insertErr);
+        return res.status(500).json({ ok: false, error: "Failed to insert booking" });
+      }
+
+      // If a coupon was used, increment its redemption count (best-effort)
+      if (appliedCouponCode) {
+        const { error: upErr } = await supabase.rpc("increment_coupon_redemption", {
+          p_code: appliedCouponCode,
+        });
+        if (upErr) console.warn("Failed to increment coupon usage:", upErr.message);
+      }
+
+      return res.json({ ok: true });
     }
 
     if (req.method === "GET") {
-      if (!isAdmin(req)) {
-        return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
+      // simple bearer check
+      const auth = req.headers.authorization || "";
+      const token = auth.replace(/^Bearer\s+/i, "");
+      if (!ADMIN_API_TOKEN || token !== ADMIN_API_TOKEN) {
+        return res.status(401).json({ ok: false, error: "Unauthorized" });
       }
+
       const { data, error } = await supabase
         .from("bookings")
         .select("*")
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: false })
+        .limit(200);
 
       if (error) {
-        return new Response(JSON.stringify({ error: error.message }), { status: 400 });
+        console.error(error);
+        return res.status(500).json({ ok: false, error: "Failed to fetch bookings" });
       }
 
-      // Normalize to your frontend types
-      const bookings = (data || []).map((r) => ({
-        id: r.id,
-        created_at: r.created_at,
-        pickupLocation: r.pickup_location,
-        dropoffLocation: r.dropoff_location,
-        dateTime: r.date_time,
-        vehicleType: r.vehicle_type,
-        name: r.name,
-        phone: r.phone,
-        email: r.email,
-        flightNumber: r.flight_number || undefined,
-        pricing: r.pricing || undefined,
-      }));
-
-      return new Response(JSON.stringify({ bookings }), { status: 200 });
+      return res.json({ ok: true, bookings: data });
     }
 
-    return new Response("Method Not Allowed", { status: 405 });
+    return res.status(405).send("Method Not Allowed");
   } catch (e: any) {
-    return new Response(JSON.stringify({ error: e?.message || "Server error" }), { status: 500 });
+    console.error(e);
+    return res.status(500).json({ ok: false, error: "Server error" });
   }
 }

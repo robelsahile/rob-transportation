@@ -37,7 +37,7 @@ function generateBookingId(lastName: string, counter: number): string {
   const day = String(now.getDate()).padStart(2, "0");
 
   const datePart = `${year}${month}${day}`;
-  const namePart = lastName.slice(0, 3).toUpperCase();
+  const namePart = (lastName || "CUST").slice(0, 3).toUpperCase();
   const counterPart = String(counter).padStart(4, "0");
 
   return `${datePart}-${namePart}-${counterPart}`;
@@ -48,13 +48,16 @@ export default function App() {
   const [bookingDetails, setBookingDetails] =
     useState<BookingFormData>(initialBooking);
 
+  // in-memory list so Admin has something to show
   const [bookings, setBookings] = useState<BookingData[]>([]);
   const [isLoadingBookings, setIsLoadingBookings] = useState(false);
 
+  // payments flow
   const [lastTotal, setLastTotal] = useState<number>(0);
   const [bookingId, setBookingId] = useState<string>("");
   const [paymentId, setPaymentId] = useState<string>("");
 
+  // admin auth state (persisted via localStorage set by AdminLogin)
   const [isAuthed, setIsAuthed] = useState<boolean>(
     () => localStorage.getItem("rob_admin_authed") === "1"
   );
@@ -124,16 +127,21 @@ export default function App() {
 
     setLastTotal(total);
 
-    // 🔹 Fetch current ride count from server (new endpoint should provide it)
+    // 🔹 Fetch the next global booking counter from the server
     let counter = 1;
     try {
       const res = await fetch("/api/booking-counter");
-      const data = await res.json();
-      counter = data.nextCounter ?? 1;
+      if (res.ok) {
+        const data = await res.json();
+        counter = data?.nextCounter ?? 1;
+      } else {
+        console.error("Failed to fetch booking counter:", res.status);
+      }
     } catch (e) {
-      console.error("Failed to fetch booking counter, fallback = 1", e);
+      console.error("Error fetching booking counter:", e);
     }
 
+    // Derive last name (fallback "CUST")
     const lastName = bookingDetails.name.trim().split(" ").slice(-1)[0] || "CUST";
     const newId = generateBookingId(lastName, counter);
     setBookingId(newId);
@@ -144,7 +152,7 @@ export default function App() {
   const handleSaveBooking = useCallback(
     (pricing: any) => {
       const newBooking: BookingData = {
-        id: bookingId,
+        id: bookingId, // use custom ID
         created_at: new Date().toISOString(),
         pickupLocation: bookingDetails.pickupLocation,
         dropoffLocation: bookingDetails.dropoffLocation,
@@ -177,11 +185,17 @@ export default function App() {
     setView("form");
   }, []);
 
+  // --------------------------
+  // SAVE TO DB (POST)
+  // --------------------------
   const postBookingToApi = useCallback(
     async (pricing: any) => {
       try {
+        // Pick up any coupon that PaymentPage stored on window
+        const applied = (window as any).__appliedCoupon || null;
+
         const payload = {
-          bookingId, // send custom ID to server
+          bookingId, // custom ID
           pickupLocation: bookingDetails.pickupLocation,
           dropoffLocation: bookingDetails.dropoffLocation,
           dateTime: bookingDetails.dateTime,
@@ -191,6 +205,9 @@ export default function App() {
           email: bookingDetails.email,
           flightNumber: bookingDetails.flightNumber?.trim() || null,
           pricing,
+          // NEW (for coupons)
+          appliedCouponCode: applied?.code || null,
+          discountCents: applied?.discountCents || 0,
         };
 
         await fetch("/api/bookings", {
@@ -200,17 +217,24 @@ export default function App() {
         });
       } catch (err) {
         console.error("Failed to persist booking:", err);
+        // Optional: show a toast or fallback UI
       }
     },
     [bookingDetails, bookingId]
   );
 
+  // --------------------------------------------
+  // Hook POST into your existing payment success
+  // --------------------------------------------
   const handlePaymentSuccess = useCallback(
     (pid: string) => {
       setPaymentId(pid);
       const pricing = (window as any)?.__lastPricing;
 
+      // Persist to DB (fire-and-forget)
       if (pricing) postBookingToApi(pricing);
+
+      // Keep your in-memory list too (useful for immediate UI)
       if (pricing) handleSaveBooking(pricing);
 
       setView("success");
@@ -218,6 +242,9 @@ export default function App() {
     [handleSaveBooking, postBookingToApi]
   );
 
+  // --------------------------------
+  // LOAD FROM DB (Admin GET)
+  // --------------------------------
   useEffect(() => {
     const ADMIN_TOKEN = import.meta.env.VITE_ADMIN_API_TOKEN as string | undefined;
 
