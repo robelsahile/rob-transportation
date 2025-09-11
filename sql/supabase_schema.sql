@@ -1,5 +1,6 @@
+-- Replace uuid with text for custom booking IDs
 create table public.bookings (
-  id uuid primary key default gen_random_uuid(),
+  id text primary key,
   created_at timestamptz not null default now(),
   pickup_location text not null,
   dropoff_location text not null,
@@ -12,8 +13,10 @@ create table public.bookings (
   pricing jsonb
 );
 
--- Optional helpful index
-create index on public.bookings (created_at desc);
+-- Track global counter
+create table public.booking_counter (
+  id serial primary key,
+  current_value int not null
+);
 
--- Enable RLS (we’ll use service role from serverless API)
-alter table public.bookings enable row level security;
+insert into public.booking_counter (current_value) values (0);
