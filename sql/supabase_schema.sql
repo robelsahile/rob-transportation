@@ -51,6 +51,10 @@ select 0
 where not exists (select 1 from public.booking_counter);
 
 -- COUPONS
+-- Show where we are
+select current_database() as db, current_schema as schema from information_schema.schemata where schema_name='public' limit 1;
+
+-- Ensure the coupons table exists (idempotent)
 create table if not exists public.coupons (
   id bigserial primary key,
   code text not null unique,
@@ -108,12 +112,13 @@ $$;
 -- (C) SEED COUPONS (safe upserts)
 -- ==========================================================
 
+-- Seed / upsert the four codes
 insert into public.coupons (code, kind, percent_off, value_cents, max_redemptions, active)
 values
   ('WELCOME10', 'percent', 10.00, 0, 1000, true),
   ('TAKE15',    'percent', 15.00, 0, null, true),
   ('SAVE5',     'fixed',   null,  500, null, true),
-  ('MEGA99',    'percent', 99.00, 0, 100,  true)  -- the 99% off you asked for
+  ('MEGA99',    'percent', 99.00, 0, 100,  true)
 on conflict (code) do update
 set
   kind            = excluded.kind,
@@ -122,3 +127,7 @@ set
   max_redemptions = excluded.max_redemptions,
   active          = excluded.active;
 
+-- Verify they’re present and active
+select code, kind, percent_off, value_cents, max_redemptions, redemptions_used, active
+from public.coupons
+order by code;

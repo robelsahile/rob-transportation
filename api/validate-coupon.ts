@@ -6,6 +6,7 @@ const { SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY } = process.env;
 if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
   throw new Error("Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY");
 }
+
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
   auth: { persistSession: false },
 });
@@ -26,14 +27,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     const raw = String(code).trim();
-    // Case-insensitive EXACT match (no lower() expression); ILIKE works without % for equality
+
+    // Case-insensitive EXACT match; ILIKE without % treats it as equality (case-insensitive)
     const { data: coupon, error } = await supabase
       .from("coupons")
       .select("*")
       .eq("active", true)
-      .ilike("code", raw)   // <-- key change
+      .ilike("code", raw) // <— key bit
       .limit(1)
-      .single();
+      .maybeSingle();
 
     if (error || !coupon) {
       return res.status(404).json({ ok: false, error: "Coupon not found or inactive" });
@@ -44,7 +46,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(410).json({ ok: false, error: "Coupon expired" });
     }
 
-    // Max redemptions (if set)
+    // Max-redemptions check
     if (
       coupon.max_redemptions !== null &&
       typeof coupon.max_redemptions === "number" &&
