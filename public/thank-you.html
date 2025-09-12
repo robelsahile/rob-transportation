@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="robots" content="noindex" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Thank You</title>
+  <style>
+    /* intentionally minimal, isolated */
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 24px; }
+  </style>
+</head>
+<body>
+  <h1>Payment Successful</h1>
+  <p>Saving your booking…</p>
+  <script>
+    (async function () {
+      try {
+        const url = new URL(window.location.href);
+        const bid = url.searchParams.get("bookingId") || "";
+        if (!bid) { window.location.replace("/"); return; }
+
+        const raw = localStorage.getItem("rt_pending_" + bid);
+        if (raw) {
+          const pending = JSON.parse(raw);
+          await fetch("/api/bookings", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              bookingId: bid,
+              pickupLocation: pending.details.pickupLocation,
+              dropoffLocation: pending.details.dropoffLocation,
+              dateTime: pending.details.dateTime,
+              vehicleType: pending.details.vehicleType,
+              name: pending.details.name,
+              phone: pending.details.phone,
+              email: pending.details.email,
+              flightNumber: pending.details.flightNumber || null,
+              pricing: pending.pricing || null
+            })
+          });
+          localStorage.removeItem("rt_pending_" + bid);
+        }
+      } catch (e) {}
+      window.location.replace("/");
+    })();
+  </script>
+</body>
+</html>

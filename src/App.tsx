@@ -146,6 +146,18 @@ export default function App() {
     const newId = generateBookingId(lastName, counter);
     setBookingId(newId);
 
+    // ✅ ADDED: stash pending booking for /public/thank-you.html to persist after Square redirect
+    try {
+      const pending = {
+        details: bookingDetails,
+        pricing: pricing || null,
+        createdAt: new Date().toISOString(),
+      };
+      localStorage.setItem(`rt_pending_${newId}`, JSON.stringify(pending));
+    } catch {
+      // ignore storage errors
+    }
+
     setView("payment");
   }, [bookingDetails]);
 

@@ -3,20 +3,16 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { createClient } from "@supabase/supabase-js";
 
 const { SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, ADMIN_API_TOKEN } = process.env;
-
 if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
   throw new Error("Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY");
 }
-
-const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
-  auth: { persistSession: false },
-});
+const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false } });
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     if (req.method === "POST") {
       const {
-        bookingId, // custom id: YYYYMMDD-XXX-NNNN
+        bookingId,
         pickupLocation,
         dropoffLocation,
         dateTime,
@@ -25,49 +21,37 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         phone,
         email,
         flightNumber,
-        pricing,
-        appliedCouponCode,
-        discountCents,
+        pricing
       } = req.body || {};
 
       if (!bookingId || !pickupLocation || !dropoffLocation || !dateTime || !vehicleType || !name || !phone || !email) {
         return res.status(400).json({ ok: false, error: "Missing required fields" });
       }
 
-      // Insert booking
-      const { error: insertErr } = await supabase.from("bookings").insert({
-        id: bookingId,
-        pickup_location: pickupLocation,
-        dropoff_location: dropoffLocation,
-        date_time: dateTime,
-        vehicle_type: String(vehicleType),
-        name,
-        phone,
-        email,
-        flight_number: flightNumber || null,
-        pricing: pricing ?? null,
-        applied_coupon_code: appliedCouponCode || null,
-        discount_cents: Number(discountCents || 0),
-      });
+      const { error } = await supabase.from("bookings").upsert(
+        {
+          id: bookingId,
+          pickup_location: pickupLocation,
+          dropoff_location: dropoffLocation,
+          date_time: dateTime,
+          vehicle_type: String(vehicleType),
+          name,
+          phone,
+          email,
+          flight_number: flightNumber || null,
+          pricing: pricing ?? null
+        },
+        { onConflict: "id" } // idempotent
+      );
 
-      if (insertErr) {
-        console.error(insertErr);
+      if (error) {
+        console.error(error);
         return res.status(500).json({ ok: false, error: "Failed to insert booking" });
       }
-
-      // If a coupon was used, increment its redemption count (best-effort)
-      if (appliedCouponCode) {
-        const { error: upErr } = await supabase.rpc("increment_coupon_redemption", {
-          p_code: appliedCouponCode,
-        });
-        if (upErr) console.warn("Failed to increment coupon usage:", upErr.message);
-      }
-
       return res.json({ ok: true });
     }
 
     if (req.method === "GET") {
-      // simple bearer check
       const auth = req.headers.authorization || "";
       const token = auth.replace(/^Bearer\s+/i, "");
       if (!ADMIN_API_TOKEN || token !== ADMIN_API_TOKEN) {
@@ -89,7 +73,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     return res.status(405).send("Method Not Allowed");
-  } catch (e: any) {
+  } catch (e) {
     console.error(e);
     return res.status(500).json({ ok: false, error: "Server error" });
   }
