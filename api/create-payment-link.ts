@@ -1,4 +1,3 @@
-// /api/create-payment-link.ts
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import crypto from "crypto";
 
@@ -27,40 +26,41 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const {
       amount,           // cents (subtotal)
-      discountCents,    // optional cents to subtract
-      bookingId,        // custom ID (YYYYMMDD-XXX-NNNN)
+      bookingId,        // your custom ID e.g. 20250911-SAH-0001
       customerName,
       customerEmail,
-      redirectUrl,      // where Square redirects after payment
-      couponCode,       // optional; for reference
+      redirectUrl,
     } = req.body as {
       amount: number;
-      discountCents?: number;
       bookingId?: string;
       customerName?: string;
       customerEmail?: string;
       redirectUrl?: string;
-      couponCode?: string;
     };
 
-    const safeAmount = Math.max(0, Number(amount) | 0);
-    const safeDiscount = Math.max(0, Number(discountCents || 0) | 0);
-    const finalCents = Math.max(safeAmount - safeDiscount, 50); // keep >= $0.50
-
-    const noteParts = [`Booking ${bookingId || "N/A"}`];
-    if (couponCode) noteParts.push(`Coupon ${couponCode}`);
-    const orderNote = noteParts.join(" | ");
-
+    const finalCents = Math.max(50, Number(amount) | 0); // keep >= $0.50
     const idempotencyKey = crypto.randomUUID();
+
+    // Make the booking ID visible in 3 places:
+    // 1) payment_note -> appears on the Payment in Dashboard
+    // 2) order.note   -> appears on the Order
+    // 3) line item name -> visible on the hosted checkout and in Orders
+    const bookingLabel = bookingId ? `Booking ${bookingId}` : "Booking N/A";
 
     const payload = {
       idempotency_key: idempotencyKey,
+      // Shows on the Payment object in Dashboard (easiest place to find it)
+      payment_note: bookingLabel,
+
+      // Build the Order
       order: {
         location_id: SQUARE_LOCATION_ID,
-        reference_id: bookingId || undefined,
+        reference_id: bookingId || undefined, // stored with order (not always surfaced in UI)
+        note: bookingLabel,                   // visible on the order
         line_items: [
           {
-            name: "Ride Booking",
+            // Put the ID in the line item title so it’s also visible on the checkout page
+            name: bookingId ? `Ride Booking — ${bookingId}` : "Ride Booking",
             quantity: "1",
             base_price_money: {
               amount: finalCents,
@@ -68,12 +68,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             },
           },
         ],
-        note: orderNote,
       },
+
+      // Hosted checkout options
       checkout_options: {
         redirect_url: redirectUrl,
         ask_for_shipping_address: false,
       },
+
+      // Pre-fill buyer email (optional)
       pre_populated_data: {
         buyer_email: customerEmail || undefined,
       },
@@ -84,7 +87,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       headers: {
         Authorization: `Bearer ${SQUARE_ACCESS_TOKEN}`,
         "Content-Type": "application/json",
-        "Square-Version": "2024-08-21",
+        // Use a current version so notes display reliably in Dashboard
+        "Square-Version": "2025-08-20",
       },
       body: JSON.stringify(payload),
     });
@@ -95,7 +99,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(resp.status).send(typeof data === "string" ? data : JSON.stringify(data));
     }
 
-    const url = data?.payment_link?.url as string | undefined;
+    const url: string | undefined =
+      data?.payment_link?.url || data?.payment_link?.long_url;
+
     if (!url) {
       console.error("Square response missing payment_link.url", data);
       return res.status(500).send("No payment link returned from Square.");
