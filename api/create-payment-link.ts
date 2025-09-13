@@ -22,38 +22,56 @@ function dollarsToCents(n: any): number | null {
   if (n === null || n === undefined) return null;
   const num = typeof n === "string" ? Number(n.replace(/[^0-9.\-]/g, "")) : Number(n);
   if (!Number.isFinite(num)) return null;
-  const cents = Math.round(num * 100);
-  return cents >= 0 ? cents : null;
+  return Math.round(num * 100);
 }
 
-function deriveAmountCents(form: Record<string, any>): number | null {
-  // 1) Preferred: amountCents already provided
+/**
+ * Robustly derive amount (in CENTS) from various shapes,
+ * and normalize if the client already sent cents.
+ * Examples that should all resolve to 4950:
+ *  - amountCents: 4950
+ *  - amount: 49.5
+ *  - pricing.total: "49.50"
+ *  - pricing.totalCents: 4950
+ * Guards against 100x errors (e.g., 495000).
+ */
+function deriveAndNormalizeAmountCents(form: Record<string, any>): number | null {
+  const centsCandidates: (number | null)[] = [];
+
+  // 1) If amountCents provided, treat it as CENTS
   if (form.amountCents != null) {
     const c = Number(form.amountCents);
-    if (Number.isFinite(c) && Math.trunc(c) === c && c > 0) return c;
+    if (Number.isFinite(c)) centsCandidates.push(Math.trunc(c));
   }
 
-  // 2) Accept common dollar fields and convert
-  const dollarCandidates = [
-    form.amount, form.total, form.price, form.grandTotal,
-    form?.pricing?.total, form?.pricing?.grandTotal,
-  ];
-  for (const candidate of dollarCandidates) {
-    const c = dollarsToCents(candidate);
-    if (c && c > 0) return c;
+  // 2) Known CENT fields
+  const centFields = [form?.pricing?.totalCents, form?.pricing?.grandTotalCents];
+  for (const v of centFields) {
+    const c = Number(v);
+    if (Number.isFinite(c)) centsCandidates.push(Math.trunc(c));
   }
 
-  // 3) Accept common cent fields nested in pricing
-  const centCandidates = [
-    form?.pricing?.totalCents,
-    form?.pricing?.grandTotalCents,
-  ];
-  for (const candidate of centCandidates) {
-    const c = Number(candidate);
-    if (Number.isFinite(c) && Math.trunc(c) === c && c > 0) return c;
+  // 3) Known DOLLAR fields → convert
+  const dollarFields = [form.amount, form.total, form.price, form.grandTotal, form?.pricing?.total, form?.pricing?.grandTotal];
+  for (const v of dollarFields) {
+    const c = dollarsToCents(v);
+    if (c != null) centsCandidates.push(c);
   }
 
-  return null;
+  // Pick first positive candidate
+  let cents = centsCandidates.find((x) => typeof x === "number" && x > 0) ?? null;
+  if (cents == null) return null;
+
+  // Normalize obvious 100x mistakes:
+  // If cents is suspiciously large (e.g., >= 100_000 for small rides) and divisible by 100, scale down.
+  // Example: 4,95 0 0 0 (495000) becomes 4950.
+  if (cents >= 100000 && cents % 100 === 0) {
+    const scaled = Math.round(cents / 100);
+    // Only accept scaling if the result is a sane ride price (<= $10,000)
+    if (scaled > 0 && scaled <= 1_000_000) cents = scaled;
+  }
+
+  return cents;
 }
 
 function fallbackBookingId(lastName?: string) {
@@ -71,7 +89,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "POST") return res.status(405).send("Method Not Allowed");
 
   try {
-    const supa = getSupabase(); // may be null (we still let payment proceed)
+    const supa = getSupabase(); // may be null (we still allow payment)
     const accessToken = process.env.SQUARE_ACCESS_TOKEN;
     const locationId = process.env.SQUARE_LOCATION_ID;
     const redirectBase = process.env.PUBLIC_BASE_URL;
@@ -96,17 +114,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       flightNumber,
     } = form;
 
-    // Robust price derivation
-    const amountCents = deriveAmountCents(form);
+    // === PRICE (in cents), robust + normalized ===
+    const amountCents = deriveAndNormalizeAmountCents(form);
     if (!amountCents) {
       return res.status(400).json({
         error: "Invalid amountCents",
-        hint:
-          "Send amountCents (integer), OR amount/total/grandTotal in dollars, OR pricing.totalCents / pricing.total.",
+        hint: "Send amountCents (integer cents) or amount/total in dollars, or pricing.total/totalCents.",
       });
     }
 
-    // Build bookingId (use DB counter if available, otherwise fallback)
+    // === BOOKING ID ===
     let bookingId: string;
     if (supa) {
       try {
@@ -124,16 +141,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           const suffix = String(n).padStart(4, "0");
           bookingId = `${y}${m}${d}-${last3}-${suffix}`;
         }
-      } catch (e) {
-        console.error("Counter catch:", e);
+      } catch {
         bookingId = fallbackBookingId(lastName);
       }
     } else {
       bookingId = fallbackBookingId(lastName);
-      console.warn("Supabase env missing — proceeding without DB insert. bookingId:", bookingId);
     }
 
-    // Try to save PENDING booking (non-fatal if it fails)
+    // Try to save PENDING booking (non-fatal)
     if (supa) {
       try {
         const { error: upErr } = await supa.from("bookings").upsert(
@@ -160,7 +175,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
     }
 
-    // Create Square payment link
+    // === Create Square Payment Link ===
     const idempotencyKey = `link_${bookingId}_${crypto.randomUUID()}`;
     const headers = {
       Authorization: `Bearer ${accessToken}`,
@@ -172,10 +187,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       idempotency_key: idempotencyKey,
       order: {
         location_id: locationId,
-        reference_id: bookingId,
+        reference_id: bookingId,                           // keep for reconciliation
         line_items: [
           {
-            name: "Private Ride",
+            // Show bookingId on the hosted page:
+            name: `Private Ride • ${bookingId}`,
             quantity: "1",
             base_price_money: { amount: amountCents, currency: "USD" },
           },
@@ -203,7 +219,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const url: string | undefined = data?.payment_link?.url || data?.payment_link?.long_url;
     if (!url) return res.status(500).json({ error: "No payment link returned from Square" });
 
-    return res.status(200).json({ url, bookingId });
+    return res.status(200).json({ url, bookingId, amountCents });
   } catch (e: any) {
     console.error("create-payment-link error:", e?.message || e);
     return res.status(500).json({ error: "Server error" });
