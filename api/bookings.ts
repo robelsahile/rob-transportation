@@ -6,7 +6,9 @@ const { SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, ADMIN_API_TOKEN } = process.env
 if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
   throw new Error("Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY");
 }
-const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false } });
+const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+  auth: { persistSession: false },
+});
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
@@ -21,37 +23,58 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         phone,
         email,
         flightNumber,
-        pricing
+        pricing,
+        appliedCouponCode,
+        discountCents,
       } = req.body || {};
 
-      if (!bookingId || !pickupLocation || !dropoffLocation || !dateTime || !vehicleType || !name || !phone || !email) {
-        return res.status(400).json({ ok: false, error: "Missing required fields" });
+      if (
+        !bookingId ||
+        !pickupLocation ||
+        !dropoffLocation ||
+        !dateTime ||
+        !vehicleType ||
+        !name ||
+        !phone ||
+        !email
+      ) {
+        return res
+          .status(400)
+          .json({ ok: false, error: "Missing required fields" });
       }
 
+      // Upsert by id so the thank-you page can safely repeat the call
       const { error } = await supabase.from("bookings").upsert(
         {
           id: bookingId,
           pickup_location: pickupLocation,
           dropoff_location: dropoffLocation,
           date_time: dateTime,
-          vehicle_type: String(vehicleType),
+          vehicle_type: vehicleType,
           name,
           phone,
           email,
           flight_number: flightNumber || null,
-          pricing: pricing ?? null
+          pricing: pricing ?? null,
+          applied_coupon_code: appliedCouponCode ?? null,
+          discount_cents: Number.isFinite(discountCents)
+            ? Number(discountCents)
+            : 0,
         },
-        { onConflict: "id" } // idempotent
+        { onConflict: "id" }
       );
 
       if (error) {
         console.error(error);
-        return res.status(500).json({ ok: false, error: "Failed to insert booking" });
+        return res
+          .status(500)
+          .json({ ok: false, error: "Failed to insert booking" });
       }
       return res.json({ ok: true });
     }
 
     if (req.method === "GET") {
+      // Admin auth via server token
       const auth = req.headers.authorization || "";
       const token = auth.replace(/^Bearer\s+/i, "");
       if (!ADMIN_API_TOKEN || token !== ADMIN_API_TOKEN) {
@@ -66,7 +89,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       if (error) {
         console.error(error);
-        return res.status(500).json({ ok: false, error: "Failed to fetch bookings" });
+        return res
+          .status(500)
+          .json({ ok: false, error: "Failed to fetch bookings" });
       }
 
       return res.json({ ok: true, bookings: data });
