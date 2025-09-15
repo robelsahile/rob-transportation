@@ -18,11 +18,12 @@ const PaymentPage: React.FC<PaymentPageProps> = (props) => {
   const subtotalCents = Math.round(totalAmount * 100);
   const displaySubtotal = useMemo(() => `$${(subtotalCents / 100).toFixed(2)}`, [subtotalCents]);
 
-  // NEW: read the chosen vehicle name from the last pricing breakdown (set on Review step)
-  const vehicleName = useMemo(() => {
-    const v = (window as any)?.__lastPricing?.vehicle;
-    return (typeof v === "string" && v.trim()) ? v.trim() : "Private Ride";
-  }, []);
+  // Pull the chosen vehicle name from pricing saved on the Review step
+  const vehicleName =
+    typeof (window as any)?.__lastPricing?.vehicle === "string" &&
+    (window as any).__lastPricing.vehicle.trim()
+      ? (window as any).__lastPricing.vehicle.trim()
+      : "Private Ride";
 
   async function handleHostedCheckout(): Promise<void> {
     setError(null);
@@ -32,17 +33,13 @@ const PaymentPage: React.FC<PaymentPageProps> = (props) => {
         bookingId || ""
       )}`;
 
-      // Only send subtotal; Square will provide the coupon field in hosted checkout
       const body = {
         amount: subtotalCents,
         bookingId,
         customerName,
         customerEmail,
         redirectUrl,
-        // NEW: send the vehicle name so the order summary shows the selected vehicle
-        vehicleName,
-        // Optional: best-effort title hint (Square uses line item + reference id for header)
-        orderTitle: bookingId ? `Booking Id - ${bookingId}` : undefined,
+        vehicleName, // ensure order list shows the selected vehicle
       };
 
       const resp = await fetch("/api/create-payment-link", {
@@ -93,8 +90,6 @@ const PaymentPage: React.FC<PaymentPageProps> = (props) => {
           </div>
         )}
       </div>
-
-      {/* Promo box removed — Square will show "Add coupon" on checkout page */}
 
       {error && (
         <div className="mt-4 rounded-lg bg-red-50 text-red-700 p-3 text-sm">{error}</div>
