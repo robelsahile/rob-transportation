@@ -146,14 +146,16 @@ export default function App() {
     const newId = generateBookingId(lastName, counter);
     setBookingId(newId);
 
-    // ✅ ADDED: stash pending booking for /public/thank-you.html to persist after Square redirect
+    // ✅ Stash pending booking (for post-redirect rehydrate)
     try {
       const pending = {
         details: bookingDetails,
-        pricing: pricing || null,
+        pricing: (window as any)?.__lastPricing || null,
         createdAt: new Date().toISOString(),
       };
       localStorage.setItem(`rt_pending_${newId}`, JSON.stringify(pending));
+      // remember the last one explicitly (helps us find the right key)
+      localStorage.setItem("rt_pending_last", newId);
     } catch {
       // ignore storage errors
     }
@@ -203,7 +205,7 @@ export default function App() {
   const postBookingToApi = useCallback(
     async (pricing: any) => {
       try {
-        // Pick up any coupon that PaymentPage stored on window
+        // Pick up any coupon that PaymentPage stored on window (kept for compatibility)
         const applied = (window as any).__appliedCoupon || null;
 
         const payload = {
@@ -217,7 +219,6 @@ export default function App() {
           email: bookingDetails.email,
           flightNumber: bookingDetails.flightNumber?.trim() || null,
           pricing,
-          // NEW (for coupons)
           appliedCouponCode: applied?.code || null,
           discountCents: applied?.discountCents || 0,
         };
@@ -229,7 +230,6 @@ export default function App() {
         });
       } catch (err) {
         console.error("Failed to persist booking:", err);
-        // Optional: show a toast or fallback UI
       }
     },
     [bookingDetails, bookingId]
@@ -281,6 +281,92 @@ export default function App() {
     })();
   }, [view, isAuthed]);
 
+  /* ------------------------------------------------------------
+     NEW: On first load, if we’re on /payment-success, confirm,
+     clean the URL, and show the success view (no query string).
+     ------------------------------------------------------------ */
+  useEffect(() => {
+    (async () => {
+      if (typeof window === "undefined") return;
+      if (window.location.pathname !== "/payment-success") return;
+
+      const url = new URL(window.location.href);
+      const orderId = url.searchParams.get("orderId") || "";
+      const transactionId = url.searchParams.get("transactionId") || "";
+
+      // Find the pending booking id we created pre-redirect
+      let pendingId = localStorage.getItem("rt_pending_last") || "";
+      if (!pendingId) {
+        // Fallback: choose the most-recent rt_pending_* key
+        let latestKey = "";
+        let latestTime = 0;
+        for (const k of Object.keys(localStorage)) {
+          if (k.startsWith("rt_pending_")) {
+            try {
+              const obj = JSON.parse(localStorage.getItem(k) || "null");
+              const t = Date.parse(obj?.createdAt || "");
+              if (t && t > latestTime) {
+                latestTime = t;
+                latestKey = k;
+              }
+            } catch {}
+          }
+        }
+        if (latestKey) pendingId = latestKey.replace("rt_pending_", "");
+      }
+
+      // Confirm with backend to obtain a canonical paymentId (if possible)
+      let confirmedPaymentId = "";
+      try {
+        const resp = await fetch("/api/confirm-square", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            orderId: orderId || undefined,
+            transactionId: transactionId || undefined,
+            bookingId: pendingId || undefined,
+          }),
+        });
+        if (resp.ok) {
+          const j = await resp.json();
+          confirmedPaymentId = j?.paymentId || j?.transactionId || "";
+        }
+      } catch (e) {
+        console.error("confirm-square failed:", e);
+      }
+
+      // Save a tiny context and clean the address bar
+      try {
+        localStorage.setItem(
+          "rt_last_payment",
+          JSON.stringify({ bookingId: pendingId, orderId, transactionId, paymentId: confirmedPaymentId })
+        );
+        history.replaceState({}, "", "/payment-success"); // <= removes ?orderId=... etc
+      } catch {}
+
+      // Rehydrate pending booking (for success screen + persistence)
+      try {
+        const pending = JSON.parse(localStorage.getItem(`rt_pending_${pendingId}`) || "null");
+        if (pending?.details) {
+          setBookingDetails(pending.details);
+          // make pricing available to the page if needed
+          (window as any).__lastPricing = pending.pricing || null;
+
+          if (pending.pricing) {
+            // ensure DB has the record too
+            postBookingToApi(pending.pricing);
+            handleSaveBooking(pending.pricing);
+          }
+        }
+      } catch {}
+
+      // Finally show success view
+      setPaymentId(confirmedPaymentId || transactionId || orderId || "PAID");
+      setView("success");
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   return (
     <div className="min-h-screen flex flex-col bg-brand-bg text-brand-text">
       <Header onNavigateHome={() => setView("form")} />
@@ -316,10 +402,12 @@ export default function App() {
         )}
 
         {view === "success" && (
-          <PaymentSuccess
-            paymentId={paymentId}
-            onDone={() => setView("form")}
-          />
+          <div className="space-y-6">
+            <PaymentSuccess
+              paymentId={paymentId}
+              onDone={() => setView("form")}
+            />
+          </div>
         )}
 
         {view === "admin" && (
