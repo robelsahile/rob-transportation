@@ -18,7 +18,7 @@ const PaymentPage: React.FC<PaymentPageProps> = (props) => {
   const subtotalCents = Math.round(totalAmount * 100);
   const displaySubtotal = useMemo(() => `$${(subtotalCents / 100).toFixed(2)}`, [subtotalCents]);
 
-  // Pull the chosen vehicle name from pricing saved on the Review step
+  // Get the selected vehicle name that ReviewBooking stored on window.__lastPricing
   const vehicleName =
     typeof (window as any)?.__lastPricing?.vehicle === "string" &&
     (window as any).__lastPricing.vehicle.trim()
@@ -33,13 +33,14 @@ const PaymentPage: React.FC<PaymentPageProps> = (props) => {
         bookingId || ""
       )}`;
 
+      // Send everything the API needs
       const body = {
         amount: subtotalCents,
         bookingId,
         customerName,
         customerEmail,
         redirectUrl,
-        vehicleName, // ensure order list shows the selected vehicle
+        vehicleName, // ensure Square's order line item uses the selected vehicle
       };
 
       const resp = await fetch("/api/create-payment-link", {

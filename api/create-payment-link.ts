@@ -1,4 +1,4 @@
-// api/create-payment-link.ts
+// api/create-payment-link.ts (Edge runtime compatible)
 export const config = { runtime: "edge" };
 
 function json(status: number, data: any) {
@@ -39,21 +39,22 @@ export default async function handler(req: Request) {
     customerName,
     customerEmail,
     redirectUrl,
-    vehicleName,     // from client; used for order line item
+    vehicleName,     // <- from client; for the order line item
   } = body || {};
 
   if (!amount || !bookingId || !redirectUrl) {
     return json(400, { error: "amount, bookingId, and redirectUrl are required." });
   }
 
-  // 1) Line item name = selected vehicle (keeps vehicle in the Order summary list)
-  // 2) Header shows "<Vehicle> • Booking Id – yyyymmdd-xxx-nnnn" via reference_id
+  // EXACT behavior you asked:
+  // - Top of hosted page shows "<Vehicle Name> • Booking Id – yyyymmdd-xxx-nnnn"
+  // - Order summary list item shows "<Vehicle Name>"
   const order = {
     location_id: SQUARE_LOCATION_ID,
-    reference_id: `Booking Id – ${bookingId}`,
+    reference_id: `Booking Id – ${bookingId}`, // Booking Id appears in the header area
     line_items: [
       {
-        name: (vehicleName && String(vehicleName).trim()) || "Private Ride",
+        name: (vehicleName && String(vehicleName).trim()) || "Private Ride", // list shows the selected vehicle
         quantity: "1",
         base_price_money: { amount: Number(amount), currency: "USD" },
       },
