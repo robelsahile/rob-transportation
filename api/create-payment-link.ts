@@ -1,4 +1,4 @@
-// api/create-payment-link.ts (Edge runtime compatible)
+// api/create-payment-link.ts
 export const config = { runtime: "edge" };
 
 function json(status: number, data: any) {
@@ -39,22 +39,22 @@ export default async function handler(req: Request) {
     customerName,
     customerEmail,
     redirectUrl,
-    vehicleName,     // <- from client; for the order line item
+    vehicleName,     // from client; used for the order line item
   } = body || {};
 
   if (!amount || !bookingId || !redirectUrl) {
     return json(400, { error: "amount, bookingId, and redirectUrl are required." });
   }
 
-  // EXACT behavior you asked:
-  // - Top of hosted page shows "<Vehicle Name> • Booking Id – yyyymmdd-xxx-nnnn"
-  // - Order summary list item shows "<Vehicle Name>"
+  // 1) Order list shows the selected vehicle
+  // 2) Booking Id appears prominently at the top area via "description"
+  //    and is also stored in reference_id for your records.
   const order = {
     location_id: SQUARE_LOCATION_ID,
-    reference_id: `Booking Id – ${bookingId}`, // Booking Id appears in the header area
+    reference_id: bookingId, // for merchant/Dashboard reconciliation
     line_items: [
       {
-        name: (vehicleName && String(vehicleName).trim()) || "Private Ride", // list shows the selected vehicle
+        name: (vehicleName && String(vehicleName).trim()) || "Private Ride",
         quantity: "1",
         base_price_money: { amount: Number(amount), currency: "USD" },
       },
@@ -64,6 +64,8 @@ export default async function handler(req: Request) {
   const payload: any = {
     idempotency_key: crypto.randomUUID(),
     order,
+    // The description is customer-visible on the hosted page (under the title)
+    description: `Booking Id – ${bookingId}`,
     checkout_options: {
       redirect_url: redirectUrl,
     },
