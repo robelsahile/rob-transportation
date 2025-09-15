@@ -62,7 +62,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       idempotency_key: crypto.randomUUID(),
       // This is what Square shows at the very top:
       quick_pay: {
-        name: `Selected Vehicle - ${bookingId}`, // <-- TOP TITLE (your ask)
+        name: `${vehicleName || 'Selected Vehicle'} - ${bookingId}`,  // <-- TOP TITLE (your ask)
         description: vehicleName || 'Selected Vehicle', // <-- keeps vehicle visible in the order
         price_money: { amount: amountCents, currency: 'USD' },
         location_id: LOCATION_ID,
