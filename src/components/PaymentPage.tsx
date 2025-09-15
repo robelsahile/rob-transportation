@@ -18,6 +18,12 @@ const PaymentPage: React.FC<PaymentPageProps> = (props) => {
   const subtotalCents = Math.round(totalAmount * 100);
   const displaySubtotal = useMemo(() => `$${(subtotalCents / 100).toFixed(2)}`, [subtotalCents]);
 
+  // NEW: read the chosen vehicle name from the last pricing breakdown (set on Review step)
+  const vehicleName = useMemo(() => {
+    const v = (window as any)?.__lastPricing?.vehicle;
+    return (typeof v === "string" && v.trim()) ? v.trim() : "Private Ride";
+  }, []);
+
   async function handleHostedCheckout(): Promise<void> {
     setError(null);
     setBusy(true);
@@ -33,6 +39,10 @@ const PaymentPage: React.FC<PaymentPageProps> = (props) => {
         customerName,
         customerEmail,
         redirectUrl,
+        // NEW: send the vehicle name so the order summary shows the selected vehicle
+        vehicleName,
+        // Optional: best-effort title hint (Square uses line item + reference id for header)
+        orderTitle: bookingId ? `Booking Id - ${bookingId}` : undefined,
       };
 
       const resp = await fetch("/api/create-payment-link", {
