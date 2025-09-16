@@ -20,7 +20,13 @@ type PricingSnapshot = {
   leadTimeMultiplier?: number;
 };
 
-export default function PaymentSuccess({ paymentId, onDone }: { paymentId: string; onDone: () => void }) {
+export default function PaymentSuccess({
+  paymentId,
+  onDone,
+}: {
+  paymentId: string;
+  onDone: () => void;
+}) {
   const [booking, setBooking] = useState<BookingFormData | null>(null);
   const [pricing, setPricing] = useState<PricingSnapshot | null>(null);
   const [bookingId, setBookingId] = useState<string>("");
@@ -43,7 +49,10 @@ export default function PaymentSuccess({ paymentId, onDone }: { paymentId: strin
   const totalDisplay = useMemo(() => {
     if (!pricing?.total || !pricing?.currency) return "";
     try {
-      return new Intl.NumberFormat(undefined, { style: "currency", currency: pricing.currency }).format(pricing.total);
+      return new Intl.NumberFormat(undefined, {
+        style: "currency",
+        currency: pricing.currency,
+      }).format(pricing.total);
     } catch {
       return `$${Number(pricing.total).toFixed(2)}`;
     }
@@ -51,7 +60,7 @@ export default function PaymentSuccess({ paymentId, onDone }: { paymentId: strin
 
   function handleDone() {
     try {
-      // Clean any leftovers from the successful checkout
+      // Clean leftovers from successful checkout
       const ctx = JSON.parse(localStorage.getItem("rt_last_payment") || "null");
       const bid = ctx?.bookingId;
       if (bid) {
@@ -151,6 +160,26 @@ export default function PaymentSuccess({ paymentId, onDone }: { paymentId: strin
                 </div>
                 <div className="text-xl font-bold">{totalDisplay}</div>
               </div>
+
+              {/* Optional trip metrics */}
+              {(typeof pricing.distanceMi === "number" || typeof pricing.durationMin === "number") && (
+                <div className="mt-2 text-sm text-slate-700">
+                  {typeof pricing.distanceMi === "number" && (
+                    <div className="flex items-center">
+                      <span>Distance</span>
+                      <span aria-hidden className="flex-1 mx-2 border-b border-dotted border-slate-300"></span>
+                      <span>{pricing.distanceMi.toFixed(1)} mi</span>
+                    </div>
+                  )}
+                  {typeof pricing.durationMin === "number" && (
+                    <div className="flex items-center">
+                      <span>Estimated duration</span>
+                      <span aria-hidden className="flex-1 mx-2 border-b border-dotted border-slate-300"></span>
+                      <span>{Math.round(pricing.durationMin)} min</span>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
         </div>
