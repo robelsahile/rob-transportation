@@ -13,8 +13,8 @@ create table if not exists public.bookings (
   email             text not null,
   flight_number     text,
   pricing           jsonb,
-  applied_coupon_code text,
-  discount_cents    integer not null default 0
+  payment_id        text,
+  payment_status    text
 );
 
 -- Add payment columns used by the webhook (safe if run multiple times)

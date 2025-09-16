@@ -63,7 +63,7 @@ export default function PaymentSuccess({
   async function postToAdmin(): Promise<void> {
     if (!bookingId || !booking) return; // only require identity + core fields
 
-    const applied = (window as any).__appliedCoupon || null;
+    // const applied = (window as any).__appliedCoupon || null;
     const payload = {
       bookingId,
       pickupLocation: booking.pickupLocation,
@@ -75,8 +75,8 @@ export default function PaymentSuccess({
       email: booking.email,
       flightNumber: booking.flightNumber?.trim() || null,
       pricing: pricing || null,               // <-- allow null
-      appliedCouponCode: applied?.code || null,
-      discountCents: applied?.discountCents || 0,
+      // appliedCouponCode: applied?.code || null,
+      // discountCents: applied?.discountCents || 0,
     };
 
     const res = await fetch("/api/bookings", {

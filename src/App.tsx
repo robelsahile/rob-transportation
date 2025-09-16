@@ -164,7 +164,7 @@ export default function App() {
   const postBookingToApi = useCallback(
     async (pricing: any) => {
       try {
-        const applied = (window as any).__appliedCoupon || null;
+        // const applied = (window as any).__appliedCoupon || null;
         const payload = {
           bookingId,
           pickupLocation: bookingDetails.pickupLocation,
@@ -176,8 +176,8 @@ export default function App() {
           email: bookingDetails.email,
           flightNumber: bookingDetails.flightNumber?.trim() || null,
           pricing,
-          appliedCouponCode: applied?.code || null,
-          discountCents: applied?.discountCents || 0,
+          // appliedCouponCode: applied?.code || null,
+          // discountCents: applied?.discountCents || 0,
         };
 
         await fetch("/api/bookings", {

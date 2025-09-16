@@ -2,99 +2,127 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { createClient } from "@supabase/supabase-js";
 
-const { SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, ADMIN_API_TOKEN } = process.env;
+/**
+ * ENV required:
+ *  - SUPABASE_URL
+ *  - SUPABASE_SERVICE_ROLE_KEY  (preferred)  OR  ADMIN_API_TOKEN (legacy var you used)
+ * Optional for GET auth:
+ *  - ADMIN_API_TOKEN            (if set, GET requires Authorization: Bearer <token>)
+ */
 
-if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-  // Surface this early — it’s a common 500 cause
-  throw new Error("Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY environment variables.");
+const SUPABASE_URL = process.env.SUPABASE_URL!;
+const SERVICE_KEY =
+  process.env.SUPABASE_SERVICE_ROLE_KEY ||
+  process.env.ADMIN_API_TOKEN || // fallback for your previous naming
+  "";
+
+if (!SUPABASE_URL || !SERVICE_KEY) {
+  // Fail fast on cold start so it's obvious in logs
+  console.warn(
+    "[/api/bookings] Missing SUPABASE_URL or service key env (SUPABASE_SERVICE_ROLE_KEY / ADMIN_API_TOKEN)"
+  );
 }
 
-const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
-  auth: { persistSession: false },
-});
+const supabase = createClient(SUPABASE_URL, SERVICE_KEY);
 
-type PostBody = {
-  bookingId?: string;
-  pickupLocation?: string;
-  dropoffLocation?: string;
-  dateTime?: string; // ISO string OK
-  vehicleType?: string;
-  name?: string;
-  phone?: string;
-  email?: string;
-  flightNumber?: string | null;
-  pricing?: any | null;
-  appliedCouponCode?: string | null;
-  discountCents?: number | null;
-};
-
-function missing(fields: Record<string, unknown>): string[] {
-  return Object.entries(fields)
-    .filter(([, v]) => v === undefined || v === null || (typeof v === "string" && v.trim() === ""))
-    .map(([k]) => k);
+// Small helper to send JSON consistently
+function send(res: VercelResponse, status: number, body: any) {
+  res.status(status).setHeader("Content-Type", "application/json");
+  res.send(JSON.stringify(body));
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  try {
-    if (req.method === "POST") {
-      const b = (req.body || {}) as PostBody;
+  // CORS / preflight
+  if (req.method === "OPTIONS") {
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+    return res.status(204).end();
+  }
 
-      // Validate required fields (these are NOT NULL in your DB)
-      const required = {
-        bookingId: b.bookingId,
-        pickupLocation: b.pickupLocation,
-        dropoffLocation: b.dropoffLocation,
-        dateTime: b.dateTime,
-        vehicleType: b.vehicleType,
-        name: b.name,
-        phone: b.phone,
-        email: b.email,
-      };
-      const missingFields = missing(required);
-      if (missingFields.length) {
-        return res
-          .status(400)
-          .json({ ok: false, error: "Missing required fields", fields: missingFields });
+  // Allow simple CORS for browser calls
+  res.setHeader("Access-Control-Allow-Origin", "*");
+
+  if (req.method === "POST") {
+    try {
+      const {
+        bookingId,
+        pickupLocation,
+        dropoffLocation,
+        dateTime,
+        vehicleType,
+        name,
+        phone,
+        email,
+        flightNumber,
+        pricing, // JSON (optional)
+      } = (req.body ?? {}) as Record<string, any>;
+
+      // Minimal validation
+      if (
+        !bookingId ||
+        !pickupLocation ||
+        !dropoffLocation ||
+        !dateTime ||
+        !vehicleType ||
+        !name ||
+        !phone ||
+        !email
+      ) {
+        return send(res, 400, { ok: false, error: "Missing required booking fields." });
       }
 
-      // Build row for DB (snake_case columns)
-      const row = {
-        id: b.bookingId!,
-        pickup_location: b.pickupLocation!,
-        dropoff_location: b.dropoffLocation!,
-        date_time: b.dateTime!, // ISO string is fine for timestamptz
-        vehicle_type: String(b.vehicleType!),
-        name: b.name!,
-        phone: b.phone!,
-        email: b.email!,
-        flight_number: b.flightNumber ?? null,
-        pricing: b.pricing ?? null, // jsonb nullable
-        applied_coupon_code: b.appliedCouponCode ?? null,
-        discount_cents:
-          typeof b.discountCents === "number" && Number.isFinite(b.discountCents)
-            ? Math.trunc(b.discountCents)
-            : 0, // your schema has default 0, but we normalize here
+      // Whitelist + map to snake_case (your table columns)
+      const row: any = {
+        id: String(bookingId),
+        pickup_location: String(pickupLocation),
+        dropoff_location: String(dropoffLocation),
+        date_time: new Date(dateTime).toISOString(),
+        vehicle_type: String(vehicleType),
+        name: String(name),
+        phone: String(phone),
+        email: String(email),
+        flight_number: flightNumber ? String(flightNumber) : null,
+        pricing: pricing ?? null, // must be JSON-serializable for jsonb
       };
 
-      const { error } = await supabase.from("bookings").upsert(row, { onConflict: "id" });
+      // Upsert by primary key id so multiple posts are safe/idempotent
+      const { error } = await supabase.from("bookings").upsert(row, {
+        onConflict: "id",
+        ignoreDuplicates: false,
+      });
 
       if (error) {
-        // Return the real error so you can see it in DevTools -> Network -> Preview
-        return res
-          .status(500)
-          .json({ ok: false, error: "Failed to insert booking", error_detail: error.message });
+        return send(res, 500, {
+          ok: false,
+          error: "Failed to save booking",
+          error_detail: error.message,
+        });
       }
 
-      return res.status(200).json({ ok: true });
+      return send(res, 200, { ok: true });
+    } catch (e: any) {
+      return send(res, 500, {
+        ok: false,
+        error: "Exception while saving booking",
+        error_detail: e?.message || String(e),
+      });
     }
+  }
 
-    if (req.method === "GET") {
-      // Admin-protected list
-      const auth = req.headers.authorization || "";
-      const token = auth.replace(/^Bearer\s+/i, "");
-      if (!ADMIN_API_TOKEN || token !== ADMIN_API_TOKEN) {
-        return res.status(401).json({ ok: false, error: "Unauthorized" });
+  if (req.method === "GET") {
+    try {
+      // Optional bearer auth for Admin view
+      const adminToken = process.env.ADMIN_API_TOKEN;
+      if (adminToken) {
+        const bearer = (req.headers.authorization || "").replace(/^Bearer\s+/i, "").trim();
+        if (!bearer || bearer !== adminToken) {
+          return send(res, 401, { ok: false, error: "Unauthorized" });
+        }
       }
+
+      // Avoid 304/ETag confusion while testing
+      res.setHeader("Cache-Control", "no-store");
 
       const { data, error } = await supabase
         .from("bookings")
@@ -103,17 +131,32 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         .limit(200);
 
       if (error) {
-        return res
-          .status(500)
-          .json({ ok: false, error: "Failed to fetch bookings", error_detail: error.message });
+        return send(res, 500, { ok: false, error: error.message });
       }
 
-      return res.status(200).json({ ok: true, bookings: data });
-    }
+      // Normalize keys that AdminDashboard expects (camelCase mirror)
+      const bookings =
+        (data || []).map((r: any) => ({
+          id: r.id,
+          created_at: r.created_at,
+          pickupLocation: r.pickup_location,
+          dropoffLocation: r.dropoff_location,
+          dateTime: r.date_time,
+          vehicleType: r.vehicle_type,
+          name: r.name,
+          phone: r.phone,
+          email: r.email,
+          flightNumber: r.flight_number,
+          pricing: r.pricing ?? null,
+          paymentId: r.payment_id ?? null,
+          paymentStatus: r.payment_status ?? null,
+        })) ?? [];
 
-    return res.status(405).send("Method Not Allowed");
-  } catch (e: any) {
-    // Final catch-all with message
-    return res.status(500).json({ ok: false, error: "Server error", error_detail: String(e?.message || e) });
+      return send(res, 200, { ok: true, bookings });
+    } catch (e: any) {
+      return send(res, 500, { ok: false, error: e?.message || String(e) });
+    }
   }
+
+  return send(res, 405, { ok: false, error: "Method not allowed" });
 }
