@@ -196,8 +196,7 @@ export default function App() {
     (pid: string) => {
       setPaymentId(pid);
       const pricing = (window as any)?.__lastPricing;
-
-      if (pricing) postBookingToApi(pricing);
+      postBookingToApi(pricing ?? null);     // <— always post
       if (pricing) handleSaveBooking(pricing);
 
       setView("success");
@@ -258,10 +257,9 @@ export default function App() {
           if (pending?.details) {
             setBookingDetails(pending.details);
             (window as any).__lastPricing = pending.pricing || null;
-            if (pending.pricing) {
-              postBookingToApi(pending.pricing);
-              handleSaveBooking(pending.pricing);
-            }
+            postBookingToApi(pending.pricing ?? null); // <— always post, pricing can be null
+            if (pending.pricing) handleSaveBooking(pending.pricing);
+
           }
         } catch {}
 

@@ -31,7 +31,7 @@ export default function PaymentSuccess({
   const [pricing, setPricing] = useState<PricingSnapshot | null>(null);
   const [bookingId, setBookingId] = useState<string>("");
 
-  // Rehydrate what we need to SHOW
+  // Rehydrate details for display
   useEffect(() => {
     try {
       const ctx = JSON.parse(localStorage.getItem("rt_last_payment") || "null");
@@ -39,8 +39,8 @@ export default function PaymentSuccess({
       const key = ctx?.bookingId ? `rt_pending_${ctx.bookingId}` : null;
       if (key) {
         const pending = JSON.parse(localStorage.getItem(key) || "null");
-        if (pending?.details) setBooking(pending.details as BookingFormData);
-        if (pending?.pricing) setPricing(pending.pricing as PricingSnapshot);
+        if (pending?.details) setBooking(pending.details);
+        if (pending?.pricing) setPricing(pending.pricing);
       }
     } catch {
       // ignore
@@ -59,9 +59,9 @@ export default function PaymentSuccess({
     }
   }, [pricing]);
 
-  // NEW: Post to Admin on Done (explicit, idempotent)
+  // ✅ FIX 1: Always upsert to Admin — pricing can be null
   async function postToAdmin(): Promise<void> {
-    if (!bookingId || !booking || !pricing) return;
+    if (!bookingId || !booking) return; // only require identity + core fields
 
     const applied = (window as any).__appliedCoupon || null;
     const payload = {
@@ -74,16 +74,22 @@ export default function PaymentSuccess({
       phone: booking.phone,
       email: booking.email,
       flightNumber: booking.flightNumber?.trim() || null,
-      pricing,
+      pricing: pricing || null,               // <-- allow null
       appliedCouponCode: applied?.code || null,
       discountCents: applied?.discountCents || 0,
     };
 
-    await fetch("/api/bookings", {
+    const res = await fetch("/api/bookings", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
+
+    // Optional console hint if something blocks the save
+    if (!res.ok) {
+      const t = await res.text();
+      console.error("Admin POST failed:", res.status, t);
+    }
   }
 
   function cleanupAndReturnHome() {
@@ -101,11 +107,11 @@ export default function PaymentSuccess({
     onDone();
   }
 
+  // Post to Admin explicitly when user clicks Done
   async function handleDone() {
     try {
-      await postToAdmin(); // <-- send to Admin right here
+      await postToAdmin(); // idempotent upsert by bookingId on the server
     } catch (e) {
-      // If posting fails, still return home; you can check DevTools console for errors.
       console.error("Failed to persist booking from PaymentSuccess:", e);
     } finally {
       cleanupAndReturnHome();
@@ -130,7 +136,7 @@ export default function PaymentSuccess({
         </button>
       </div>
 
-      {/* Read-only booking review (unchanged UI) */}
+      {/* Read-only booking review */}
       {booking && (
         <div className="mt-8 bg-brand-surface p-6 sm:p-8 rounded-lg shadow-xl">
           <h2 className="text-2xl font-semibold text-brand-text mb-6 border-b pb-3 border-slate-200">
