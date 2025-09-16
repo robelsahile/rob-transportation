@@ -49,6 +49,27 @@ export default function PaymentSuccess({ paymentId, onDone }: { paymentId: strin
     }
   }, [pricing]);
 
+  function handleDone() {
+    try {
+      // Clean any leftovers from the successful checkout
+      const ctx = JSON.parse(localStorage.getItem("rt_last_payment") || "null");
+      const bid = ctx?.bookingId;
+      if (bid) {
+        localStorage.removeItem(`rt_pending_${bid}`);
+      }
+      localStorage.removeItem("rt_last_payment");
+      localStorage.removeItem("rt_pending_last");
+      // also clear any pricing scratch
+      (window as any).__lastPricing = null;
+
+      // Clean the address bar and stay on home
+      history.replaceState({}, "", "/");
+    } catch {
+      // ignore
+    }
+    onDone(); // parent resets state & shows home form
+  }
+
   return (
     <div className="max-w-3xl mx-auto p-6">
       <div className="text-center">
@@ -62,7 +83,7 @@ export default function PaymentSuccess({ paymentId, onDone }: { paymentId: strin
             Booking ID: <span className="font-mono">{bookingId}</span>
           </p>
         )}
-        <button className="mt-6 px-4 py-2 rounded-xl bg-black text-white" onClick={onDone}>
+        <button className="mt-6 px-4 py-2 rounded-xl bg-black text-white" onClick={handleDone}>
           Done
         </button>
       </div>
@@ -74,7 +95,6 @@ export default function PaymentSuccess({ paymentId, onDone }: { paymentId: strin
             Review Your Booking
           </h2>
 
-          {/* Details table (matches your existing design) */}
           <div className="overflow-hidden rounded-md border border-slate-200">
             <dl className="divide-y divide-slate-200 text-sm">
               <div className="grid grid-cols-3 gap-4 p-3 sm:p-4 bg-white">
@@ -122,7 +142,6 @@ export default function PaymentSuccess({ paymentId, onDone }: { paymentId: strin
             </dl>
           </div>
 
-          {/* Price summary (simple, read-only) */}
           {pricing && (
             <div className="mt-6 rounded-md border border-slate-200 bg-white p-4">
               <div className="flex items-center justify-between">
