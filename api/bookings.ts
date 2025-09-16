@@ -5,7 +5,7 @@ import { createClient } from "@supabase/supabase-js";
 /**
  * ENV required:
  *  - SUPABASE_URL
- *  - SUPABASE_SERVICE_ROLE_KEY  (preferred)  OR  ADMIN_API_TOKEN (legacy var you used)
+ *  - SUPABASE_SERVICE_ROLE_KEY  (preferred)  OR  ADMIN_API_TOKEN (legacy fallback)
  * Optional for GET auth:
  *  - ADMIN_API_TOKEN            (if set, GET requires Authorization: Bearer <token>)
  */
@@ -13,11 +13,10 @@ import { createClient } from "@supabase/supabase-js";
 const SUPABASE_URL = process.env.SUPABASE_URL!;
 const SERVICE_KEY =
   process.env.SUPABASE_SERVICE_ROLE_KEY ||
-  process.env.ADMIN_API_TOKEN || // fallback for your previous naming
+  process.env.ADMIN_API_TOKEN || // fallback to your previous var
   "";
 
 if (!SUPABASE_URL || !SERVICE_KEY) {
-  // Fail fast on cold start so it's obvious in logs
   console.warn(
     "[/api/bookings] Missing SUPABASE_URL or service key env (SUPABASE_SERVICE_ROLE_KEY / ADMIN_API_TOKEN)"
   );
@@ -25,7 +24,6 @@ if (!SUPABASE_URL || !SERVICE_KEY) {
 
 const supabase = createClient(SUPABASE_URL, SERVICE_KEY);
 
-// Small helper to send JSON consistently
 function send(res: VercelResponse, status: number, body: any) {
   res.status(status).setHeader("Content-Type", "application/json");
   res.send(JSON.stringify(body));
@@ -39,8 +37,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
     return res.status(204).end();
   }
-
-  // Allow simple CORS for browser calls
   res.setHeader("Access-Control-Allow-Origin", "*");
 
   if (req.method === "POST") {
@@ -58,7 +54,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         pricing, // JSON (optional)
       } = (req.body ?? {}) as Record<string, any>;
 
-      // Minimal validation
+      // minimal validation
       if (
         !bookingId ||
         !pickupLocation ||
@@ -72,7 +68,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return send(res, 400, { ok: false, error: "Missing required booking fields." });
       }
 
-      // Whitelist + map to snake_case (your table columns)
+      // map camelCase -> snake_case for DB
       const row: any = {
         id: String(bookingId),
         pickup_location: String(pickupLocation),
@@ -86,7 +82,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         pricing: pricing ?? null, // must be JSON-serializable for jsonb
       };
 
-      // Upsert by primary key id so multiple posts are safe/idempotent
+      // upsert by id (idempotent)
       const { error } = await supabase.from("bookings").upsert(row, {
         onConflict: "id",
         ignoreDuplicates: false,
@@ -112,7 +108,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   if (req.method === "GET") {
     try {
-      // Optional bearer auth for Admin view
+      // Optional bearer auth for Admin
       const adminToken = process.env.ADMIN_API_TOKEN;
       if (adminToken) {
         const bearer = (req.headers.authorization || "").replace(/^Bearer\s+/i, "").trim();
@@ -121,8 +117,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
       }
 
-      // Avoid 304/ETag confusion while testing
-      res.setHeader("Cache-Control", "no-store");
+      res.setHeader("Cache-Control", "no-store"); // avoid 304 during testing
 
       const { data, error } = await supabase
         .from("bookings")
@@ -130,11 +125,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         .order("created_at", { ascending: false })
         .limit(200);
 
-      if (error) {
-        return send(res, 500, { ok: false, error: error.message });
-      }
+      if (error) return send(res, 500, { ok: false, error: error.message });
 
-      // Normalize keys that AdminDashboard expects (camelCase mirror)
+      // normalize to camelCase that AdminDashboard expects
       const bookings =
         (data || []).map((r: any) => ({
           id: r.id,

@@ -17,7 +17,7 @@ create table if not exists public.bookings (
   payment_status    text
 );
 
--- Add payment columns used by the webhook (safe if run multiple times)
+-- Add payment columns used by webhook or later use (safe if run multiple times)
 alter table public.bookings add column if not exists payment_id text;
 alter table public.bookings add column if not exists payment_status text;
 

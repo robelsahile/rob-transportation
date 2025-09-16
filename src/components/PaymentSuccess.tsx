@@ -59,11 +59,10 @@ export default function PaymentSuccess({
     }
   }, [pricing]);
 
-  // ✅ FIX 1: Always upsert to Admin — pricing can be null
+  // Always upsert to Admin — pricing can be null
   async function postToAdmin(): Promise<void> {
-    if (!bookingId || !booking) return; // only require identity + core fields
+    if (!bookingId || !booking) return;
 
-    // const applied = (window as any).__appliedCoupon || null;
     const payload = {
       bookingId,
       pickupLocation: booking.pickupLocation,
@@ -74,9 +73,7 @@ export default function PaymentSuccess({
       phone: booking.phone,
       email: booking.email,
       flightNumber: booking.flightNumber?.trim() || null,
-      pricing: pricing || null,               // <-- allow null
-      // appliedCouponCode: applied?.code || null,
-      // discountCents: applied?.discountCents || 0,
+      pricing: pricing || null,
     };
 
     const res = await fetch("/api/bookings", {
@@ -85,7 +82,6 @@ export default function PaymentSuccess({
       body: JSON.stringify(payload),
     });
 
-    // Optional console hint if something blocks the save
     if (!res.ok) {
       const t = await res.text();
       console.error("Admin POST failed:", res.status, t);
@@ -100,14 +96,11 @@ export default function PaymentSuccess({
       localStorage.removeItem("rt_last_payment");
       localStorage.removeItem("rt_pending_last");
       (window as any).__lastPricing = null;
-
-      // Keep user on home and clean URL
       history.replaceState({}, "", "/");
     } catch {}
     onDone();
   }
 
-  // Post to Admin explicitly when user clicks Done
   async function handleDone() {
     try {
       await postToAdmin(); // idempotent upsert by bookingId on the server

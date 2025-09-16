@@ -164,7 +164,6 @@ export default function App() {
   const postBookingToApi = useCallback(
     async (pricing: any) => {
       try {
-        // const applied = (window as any).__appliedCoupon || null;
         const payload = {
           bookingId,
           pickupLocation: bookingDetails.pickupLocation,
@@ -176,8 +175,6 @@ export default function App() {
           email: bookingDetails.email,
           flightNumber: bookingDetails.flightNumber?.trim() || null,
           pricing,
-          // appliedCouponCode: applied?.code || null,
-          // discountCents: applied?.discountCents || 0,
         };
 
         await fetch("/api/bookings", {
@@ -196,7 +193,7 @@ export default function App() {
     (pid: string) => {
       setPaymentId(pid);
       const pricing = (window as any)?.__lastPricing;
-      postBookingToApi(pricing ?? null);     // <— always post
+      postBookingToApi(pricing ?? null);     // always post
       if (pricing) handleSaveBooking(pricing);
 
       setView("success");
@@ -204,9 +201,7 @@ export default function App() {
     [handleSaveBooking, postBookingToApi]
   );
 
-  // When landing on /payment-success:
-  // - If URL has Square params OR we still have rt_last_payment, confirm & show success.
-  // - Otherwise, clean URL to "/" and show the home form.
+  // Handle /payment-success return path from Square
   useEffect(() => {
     (async () => {
       if (typeof window === "undefined") return;
@@ -223,7 +218,6 @@ export default function App() {
         return;
       }
 
-      // If we get here, it's a real return from Square or a still-cached success.
       try {
         const resp = await fetch("/api/confirm-square", {
           method: "POST",
@@ -246,20 +240,17 @@ export default function App() {
               paymentId: j?.paymentId || j?.transactionId || "",
             })
           );
-          // remove Square params from the bar
           history.replaceState({}, "", "/payment-success");
         } catch {}
 
-        // Rehydrate pending for success UI + saving
         try {
           const pendingId = localStorage.getItem("rt_pending_last") || "";
           const pending = JSON.parse(localStorage.getItem(`rt_pending_${pendingId}`) || "null");
           if (pending?.details) {
             setBookingDetails(pending.details);
             (window as any).__lastPricing = pending.pricing || null;
-            postBookingToApi(pending.pricing ?? null); // <— always post, pricing can be null
+            postBookingToApi(pending.pricing ?? null); // post even if null pricing
             if (pending.pricing) handleSaveBooking(pending.pricing);
-
           }
         } catch {}
 
@@ -273,7 +264,7 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Admin list loader (unchanged)
+  // Admin list loader
   useEffect(() => {
     const ADMIN_TOKEN = import.meta.env.VITE_ADMIN_API_TOKEN as string | undefined;
     if (view !== "admin" || !isAuthed) return;
