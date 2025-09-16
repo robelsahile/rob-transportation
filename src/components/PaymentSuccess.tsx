@@ -31,7 +31,7 @@ export default function PaymentSuccess({
   const [pricing, setPricing] = useState<PricingSnapshot | null>(null);
   const [bookingId, setBookingId] = useState<string>("");
 
-  // 1) Rehydrate what we need to display (unchanged)
+  // Rehydrate what we need to SHOW
   useEffect(() => {
     try {
       const ctx = JSON.parse(localStorage.getItem("rt_last_payment") || "null");
@@ -39,47 +39,13 @@ export default function PaymentSuccess({
       const key = ctx?.bookingId ? `rt_pending_${ctx.bookingId}` : null;
       if (key) {
         const pending = JSON.parse(localStorage.getItem(key) || "null");
-        if (pending?.details) setBooking(pending.details);
-        if (pending?.pricing) setPricing(pending.pricing);
+        if (pending?.details) setBooking(pending.details as BookingFormData);
+        if (pending?.pricing) setPricing(pending.pricing as PricingSnapshot);
       }
     } catch {
       // ignore
     }
   }, []);
-
-  // 2) SAFETY POST: also send to /api/bookings here (idempotent upsert by id)
-  useEffect(() => {
-    (async () => {
-      try {
-        if (!bookingId || !booking || !pricing) return;
-
-        const payload = {
-          bookingId,
-          pickupLocation: booking.pickupLocation,
-          dropoffLocation: booking.dropoffLocation,
-          dateTime: booking.dateTime,
-          vehicleType: booking.vehicleType,
-          name: booking.name,
-          phone: booking.phone,
-          email: booking.email,
-          flightNumber: booking.flightNumber?.trim() || null,
-          pricing,
-          // these extra fields exist in your schema; harmless if null
-          appliedCouponCode: (window as any)?.__appliedCoupon?.code || null,
-          discountCents: (window as any)?.__appliedCoupon?.discountCents || 0,
-        };
-
-        await fetch("/api/bookings", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
-      } catch (e) {
-        // silent fail; App.tsx already tries to save too
-        console.error("PaymentSuccess safety post failed:", e);
-      }
-    })();
-  }, [bookingId, booking, pricing]);
 
   const totalDisplay = useMemo(() => {
     if (!pricing?.total || !pricing?.currency) return "";
@@ -93,21 +59,57 @@ export default function PaymentSuccess({
     }
   }, [pricing]);
 
-  function handleDone() {
+  // NEW: Post to Admin on Done (explicit, idempotent)
+  async function postToAdmin(): Promise<void> {
+    if (!bookingId || !booking || !pricing) return;
+
+    const applied = (window as any).__appliedCoupon || null;
+    const payload = {
+      bookingId,
+      pickupLocation: booking.pickupLocation,
+      dropoffLocation: booking.dropoffLocation,
+      dateTime: booking.dateTime,
+      vehicleType: booking.vehicleType,
+      name: booking.name,
+      phone: booking.phone,
+      email: booking.email,
+      flightNumber: booking.flightNumber?.trim() || null,
+      pricing,
+      appliedCouponCode: applied?.code || null,
+      discountCents: applied?.discountCents || 0,
+    };
+
+    await fetch("/api/bookings", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+  }
+
+  function cleanupAndReturnHome() {
     try {
-      // Clean leftovers from successful checkout
       const ctx = JSON.parse(localStorage.getItem("rt_last_payment") || "null");
       const bid = ctx?.bookingId;
-      if (bid) {
-        localStorage.removeItem(`rt_pending_${bid}`);
-      }
+      if (bid) localStorage.removeItem(`rt_pending_${bid}`);
       localStorage.removeItem("rt_last_payment");
       localStorage.removeItem("rt_pending_last");
       (window as any).__lastPricing = null;
 
+      // Keep user on home and clean URL
       history.replaceState({}, "", "/");
     } catch {}
     onDone();
+  }
+
+  async function handleDone() {
+    try {
+      await postToAdmin(); // <-- send to Admin right here
+    } catch (e) {
+      // If posting fails, still return home; you can check DevTools console for errors.
+      console.error("Failed to persist booking from PaymentSuccess:", e);
+    } finally {
+      cleanupAndReturnHome();
+    }
   }
 
   return (
@@ -128,7 +130,7 @@ export default function PaymentSuccess({
         </button>
       </div>
 
-      {/* Read-only booking review */}
+      {/* Read-only booking review (unchanged UI) */}
       {booking && (
         <div className="mt-8 bg-brand-surface p-6 sm:p-8 rounded-lg shadow-xl">
           <h2 className="text-2xl font-semibold text-brand-text mb-6 border-b pb-3 border-slate-200">
@@ -182,7 +184,6 @@ export default function PaymentSuccess({
             </dl>
           </div>
 
-      {/* Optional price card — unchanged visual */}
           {pricing && (
             <div className="mt-6 rounded-md border border-slate-200 bg-white p-4">
               <div className="flex items-center justify-between">
