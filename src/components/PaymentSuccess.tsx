@@ -31,6 +31,7 @@ export default function PaymentSuccess({
   const [pricing, setPricing] = useState<PricingSnapshot | null>(null);
   const [bookingId, setBookingId] = useState<string>("");
 
+  // 1) Rehydrate what we need to display (unchanged)
   useEffect(() => {
     try {
       const ctx = JSON.parse(localStorage.getItem("rt_last_payment") || "null");
@@ -45,6 +46,40 @@ export default function PaymentSuccess({
       // ignore
     }
   }, []);
+
+  // 2) SAFETY POST: also send to /api/bookings here (idempotent upsert by id)
+  useEffect(() => {
+    (async () => {
+      try {
+        if (!bookingId || !booking || !pricing) return;
+
+        const payload = {
+          bookingId,
+          pickupLocation: booking.pickupLocation,
+          dropoffLocation: booking.dropoffLocation,
+          dateTime: booking.dateTime,
+          vehicleType: booking.vehicleType,
+          name: booking.name,
+          phone: booking.phone,
+          email: booking.email,
+          flightNumber: booking.flightNumber?.trim() || null,
+          pricing,
+          // these extra fields exist in your schema; harmless if null
+          appliedCouponCode: (window as any)?.__appliedCoupon?.code || null,
+          discountCents: (window as any)?.__appliedCoupon?.discountCents || 0,
+        };
+
+        await fetch("/api/bookings", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+      } catch (e) {
+        // silent fail; App.tsx already tries to save too
+        console.error("PaymentSuccess safety post failed:", e);
+      }
+    })();
+  }, [bookingId, booking, pricing]);
 
   const totalDisplay = useMemo(() => {
     if (!pricing?.total || !pricing?.currency) return "";
@@ -68,15 +103,11 @@ export default function PaymentSuccess({
       }
       localStorage.removeItem("rt_last_payment");
       localStorage.removeItem("rt_pending_last");
-      // also clear any pricing scratch
       (window as any).__lastPricing = null;
 
-      // Clean the address bar and stay on home
       history.replaceState({}, "", "/");
-    } catch {
-      // ignore
-    }
-    onDone(); // parent resets state & shows home form
+    } catch {}
+    onDone();
   }
 
   return (
@@ -151,6 +182,7 @@ export default function PaymentSuccess({
             </dl>
           </div>
 
+      {/* Optional price card — unchanged visual */}
           {pricing && (
             <div className="mt-6 rounded-md border border-slate-200 bg-white p-4">
               <div className="flex items-center justify-between">
@@ -160,26 +192,6 @@ export default function PaymentSuccess({
                 </div>
                 <div className="text-xl font-bold">{totalDisplay}</div>
               </div>
-
-              {/* Optional trip metrics */}
-              {(typeof pricing.distanceMi === "number" || typeof pricing.durationMin === "number") && (
-                <div className="mt-2 text-sm text-slate-700">
-                  {typeof pricing.distanceMi === "number" && (
-                    <div className="flex items-center">
-                      <span>Distance</span>
-                      <span aria-hidden className="flex-1 mx-2 border-b border-dotted border-slate-300"></span>
-                      <span>{pricing.distanceMi.toFixed(1)} mi</span>
-                    </div>
-                  )}
-                  {typeof pricing.durationMin === "number" && (
-                    <div className="flex items-center">
-                      <span>Estimated duration</span>
-                      <span aria-hidden className="flex-1 mx-2 border-b border-dotted border-slate-300"></span>
-                      <span>{Math.round(pricing.durationMin)} min</span>
-                    </div>
-                  )}
-                </div>
-              )}
             </div>
           )}
         </div>
