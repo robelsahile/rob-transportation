@@ -66,7 +66,7 @@ export default async function handler(req: Request) {
     headers: {
       Authorization: `Bearer ${token}`,
       "Content-Type": "application/json",
-      "Square-Version": "2025-02-20",
+      "Square-Version": "2024-10-18",
     },
     body: JSON.stringify(body),
   });
