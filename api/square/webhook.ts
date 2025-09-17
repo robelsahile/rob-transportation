@@ -44,8 +44,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       const paymentId: string | undefined = p.id;
       const status: string | undefined = p.status; // e.g. 'COMPLETED'
-      const amount = p?.amount_money?.amount;
-      const currency = p?.amount_money?.currency;
+      // Note: amount and currency are extracted but not currently used in this webhook
+      // const amount = p?.amount_money?.amount;
+      // const currency = p?.amount_money?.currency;
 
       // Recover booking id:
       // We injected "Booking <ID>" in payment note when creating the link.
@@ -91,7 +92,7 @@ function fullUrl(req: VercelRequest) {
 function getRawBody(req: VercelRequest): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     const chunks: Uint8Array[] = [];
-    req.on("data", (c) => chunks.push(c));
+    req.on("data", (c: Uint8Array) => chunks.push(c));
     req.on("end", () => resolve(Buffer.concat(chunks)));
     req.on("error", reject);
   });

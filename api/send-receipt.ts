@@ -121,7 +121,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     // Determine overall success
-    response.success = response.emailSent || response.smsSent;
+    response.success = Boolean(response.emailSent || response.smsSent);
 
     if (!response.success) {
       return res.status(500).json({
