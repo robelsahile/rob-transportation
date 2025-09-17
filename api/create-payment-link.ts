@@ -51,13 +51,22 @@ export default async function handler(req: Request) {
           name: `${vehicleName || "Selected Vehicle"} - ${bookingId}`,
           quantity: "1",
           base_price_money: { amount, currency: "USD" },
+          note: `Booking ${bookingId}`, // Add note for webhook processing
         },
       ],
+      taxes: [],
+      discounts: [],
     },
     checkout_options: {
-      redirect_url: redirectUrl, // clean, no bookingId query string
+      redirect_url: redirectUrl,
+      ask_for_shipping_address: false,
+      ask_for_email_address: true,
+      ask_for_phone_number: true,
     },
-    pre_populated_data: customerEmail ? { buyer_email_address: customerEmail } : undefined,
+    pre_populated_data: customerEmail ? { 
+      buyer_email_address: customerEmail,
+      buyer_phone_number: undefined // Let Square collect this
+    } : undefined,
   };
 
   const host = squareHost(env);
@@ -66,7 +75,7 @@ export default async function handler(req: Request) {
     headers: {
       Authorization: `Bearer ${token}`,
       "Content-Type": "application/json",
-      "Square-Version": "2024-10-18",
+      "Square-Version": "2023-10-18",
     },
     body: JSON.stringify(body),
   });
@@ -76,7 +85,16 @@ export default async function handler(req: Request) {
   try { data = text ? JSON.parse(text) : null; } catch {}
 
   if (!r.ok) {
-    return Response.json({ error: data?.errors?.[0]?.detail || text || "Failed to create payment link." }, { status: 500 });
+    console.error("Square API Error:", {
+      status: r.status,
+      statusText: r.statusText,
+      response: data,
+      body: body
+    });
+    return Response.json({ 
+      error: data?.errors?.[0]?.detail || data?.errors?.[0]?.code || text || "Failed to create payment link.",
+      details: data?.errors || null
+    }, { status: 500 });
   }
 
   // Normalize shape for the client

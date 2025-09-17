@@ -44,9 +44,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       const paymentId: string | undefined = p.id;
       const status: string | undefined = p.status; // e.g. 'COMPLETED'
-      // Note: amount and currency are extracted but not currently used in this webhook
-      // const amount = p?.amount_money?.amount;
-      // const currency = p?.amount_money?.currency;
+      const amount = p?.amount_money?.amount;
+      const currency = p?.amount_money?.currency;
+
+      console.log("Square webhook received:", {
+        type,
+        paymentId,
+        status,
+        amount,
+        currency,
+        order: body?.data?.object?.order
+      });
 
       // Recover booking id:
       // We injected "Booking <ID>" in payment note when creating the link.
@@ -59,14 +67,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const ref2 = p?.order?.referenceId;
       bookingId = bookingId || ref1 || ref2 || null;
 
+      console.log("Booking ID extracted:", { bookingId, note, ref1, ref2 });
+
       if (bookingId) {
-        await supabase
+        const { error } = await supabase
           .from("bookings")
           .update({
             payment_id: paymentId || null,
             payment_status: status || null,
           })
           .eq("id", bookingId);
+
+        if (error) {
+          console.error("Supabase update error:", error);
+        } else {
+          console.log("Successfully updated booking:", bookingId);
+        }
+      } else {
+        console.warn("No booking ID found in webhook data");
       }
 
       // (Optional) you could insert a payment log table here if you want.

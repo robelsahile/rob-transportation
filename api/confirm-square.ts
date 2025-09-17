@@ -43,7 +43,7 @@ export default async function handler(req: Request) {
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
-          "Square-Version": "2024-10-18",
+          "Square-Version": "2023-10-18",
         },
         body: JSON.stringify({ query: { filter: { order_ids: [orderId] } }, limit: 1 }),
       });
