@@ -30,6 +30,15 @@ export default function PaymentSuccess({
   const [booking, setBooking] = useState<BookingFormData | null>(null);
   const [pricing, setPricing] = useState<PricingSnapshot | null>(null);
   const [bookingId, setBookingId] = useState<string>("");
+  const [receiptStatus, setReceiptStatus] = useState<{
+    sending: boolean;
+    sent: boolean;
+    error: string | null;
+  }>({
+    sending: false,
+    sent: false,
+    error: null,
+  });
 
   // Rehydrate details for display
   useEffect(() => {
@@ -46,6 +55,13 @@ export default function PaymentSuccess({
       // ignore
     }
   }, []);
+
+  // Automatically send receipt when component loads with all required data
+  useEffect(() => {
+    if (bookingId && booking && paymentId && !receiptStatus.sending && !receiptStatus.sent) {
+      sendReceipt();
+    }
+  }, [bookingId, booking, paymentId]);
 
   const totalDisplay = useMemo(() => {
     if (!pricing?.total || !pricing?.currency) return "";
@@ -95,6 +111,54 @@ export default function PaymentSuccess({
     }
   }
 
+  // Send receipt via email and SMS
+  async function sendReceipt(): Promise<void> {
+    if (!bookingId || !booking || !paymentId) {
+      console.log("Skipping receipt - missing data:", { bookingId, booking: !!booking, paymentId });
+      return;
+    }
+
+    setReceiptStatus({ sending: true, sent: false, error: null });
+
+    try {
+      const receiptData = {
+        bookingId,
+        customerName: booking.name,
+        customerEmail: booking.email,
+        customerPhone: booking.phone,
+        pickupLocation: booking.pickupLocation,
+        dropoffLocation: booking.dropoffLocation,
+        dateTime: booking.dateTime,
+        vehicleType: booking.vehicleType,
+        vehicleName: pricing?.vehicle || undefined,
+        flightNumber: booking.flightNumber?.trim() || undefined,
+        pricing: pricing || null,
+        paymentId,
+      };
+
+      console.log("Sending receipt:", { bookingId, email: booking.email, phone: booking.phone });
+
+      const res = await fetch("/api/send-receipt", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(receiptData),
+      });
+
+      const result = await res.json();
+
+      if (res.ok && result.success) {
+        setReceiptStatus({ sending: false, sent: true, error: null });
+        console.log("Receipt sent successfully:", result);
+      } else {
+        throw new Error(result.error || "Failed to send receipt");
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to send receipt";
+      setReceiptStatus({ sending: false, sent: false, error: errorMessage });
+      console.error("Receipt sending failed:", error);
+    }
+  }
+
   function cleanupAndReturnHome() {
     try {
       const ctx = JSON.parse(localStorage.getItem("rt_last_payment") || "null");
@@ -111,8 +175,9 @@ export default function PaymentSuccess({
   async function handleDone() {
     try {
       await postToAdmin(); // idempotent upsert by bookingId on the server
+      await sendReceipt(); // send receipt via email and SMS
     } catch (e) {
-      console.error("Failed to persist booking from PaymentSuccess:", e);
+      console.error("Failed to persist booking or send receipt from PaymentSuccess:", e);
     } finally {
       cleanupAndReturnHome();
     }
@@ -131,6 +196,32 @@ export default function PaymentSuccess({
             Booking ID: <span className="font-mono">{bookingId}</span>
           </p>
         )}
+        {/* Receipt Status */}
+        {receiptStatus.sending && (
+          <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+            <div className="flex items-center justify-center">
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
+              <span className="text-blue-700 text-sm">Sending receipt to your email and phone...</span>
+            </div>
+          </div>
+        )}
+        
+        {receiptStatus.sent && (
+          <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+            <div className="flex items-center justify-center">
+              <span className="text-green-700 text-sm">✅ Receipt sent to your email and phone!</span>
+            </div>
+          </div>
+        )}
+        
+        {receiptStatus.error && (
+          <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+            <div className="flex items-center justify-center">
+              <span className="text-red-700 text-sm">⚠️ Receipt sending failed: {receiptStatus.error}</span>
+            </div>
+          </div>
+        )}
+
         <button className="mt-6 px-4 py-2 rounded-xl bg-black text-white" onClick={handleDone}>
           Done
         </button>

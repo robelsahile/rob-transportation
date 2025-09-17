@@ -15,6 +15,10 @@ export default async function handler(_req: VercelRequest, res: VercelResponse) 
       SQUARE_ACCESS_TOKEN: has("SQUARE_ACCESS_TOKEN"),
       SQUARE_LOCATION_ID: has("SQUARE_LOCATION_ID"),
       PUBLIC_BASE_URL: has("PUBLIC_BASE_URL"),
+      RESEND_API_KEY: has("RESEND_API_KEY"),
+      TWILIO_ACCOUNT_SID: has("TWILIO_ACCOUNT_SID"),
+      TWILIO_AUTH_TOKEN: has("TWILIO_AUTH_TOKEN"),
+      TWILIO_PHONE_NUMBER: has("TWILIO_PHONE_NUMBER"),
     },
   });
 }
