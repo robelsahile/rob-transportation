@@ -61,7 +61,10 @@ export default function PaymentSuccess({
 
   // Always upsert to Admin — pricing can be null
   async function postToAdmin(): Promise<void> {
-    if (!bookingId || !booking) return;
+    if (!bookingId || !booking) {
+      console.log("Skipping admin POST - missing data:", { bookingId, booking: !!booking });
+      return;
+    }
 
     const payload = {
       bookingId,
@@ -76,6 +79,8 @@ export default function PaymentSuccess({
       pricing: pricing || null,
     };
 
+    console.log("Posting booking to admin API:", { bookingId, payload });
+    
     const res = await fetch("/api/bookings", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -85,6 +90,8 @@ export default function PaymentSuccess({
     if (!res.ok) {
       const t = await res.text();
       console.error("Admin POST failed:", res.status, t);
+    } else {
+      console.log("Admin POST successful for booking:", bookingId);
     }
   }
 

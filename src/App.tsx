@@ -267,18 +267,34 @@ export default function App() {
   // Admin list loader
   useEffect(() => {
     const ADMIN_TOKEN = import.meta.env.VITE_ADMIN_API_TOKEN as string | undefined;
-    if (view !== "admin" || !isAuthed) return;
+    console.log("Admin loader effect triggered:", { view, isAuthed, hasToken: !!ADMIN_TOKEN });
+    
+    if (view !== "admin" || !isAuthed) {
+      console.log("Skipping admin data load:", { view, isAuthed });
+      return;
+    }
+    
     (async () => {
+      console.log("Loading admin bookings...");
       setIsLoadingBookings(true);
       try {
         const res = await fetch("/api/bookings", {
           headers: { Authorization: `Bearer ${ADMIN_TOKEN ?? ""}` },
         });
-        if (!res.ok) throw new Error(`Failed to load bookings (${res.status})`);
+        console.log("Admin API response:", { status: res.status, ok: res.ok });
+        
+        if (!res.ok) {
+          const errorText = await res.text();
+          console.error("Admin API error response:", errorText);
+          throw new Error(`Failed to load bookings (${res.status}): ${errorText}`);
+        }
+        
         const json = await res.json();
+        console.log("Admin API success:", { bookingsCount: json.bookings?.length || 0, bookings: json.bookings });
         setBookings(json.bookings || []);
       } catch (err) {
-        console.error(err);
+        console.error("Failed to load bookings:", err);
+        setBookings([]); // Ensure we show empty state on error
       } finally {
         setIsLoadingBookings(false);
       }
@@ -354,6 +370,7 @@ export default function App() {
           ) : (
             <AdminLogin
               onSuccess={() => {
+                console.log("Admin login successful, setting auth and view");
                 setIsAuthed(true);
                 setView("admin");
               }}

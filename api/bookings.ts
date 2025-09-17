@@ -41,6 +41,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   if (req.method === "POST") {
     try {
+      console.log("POST /api/bookings - Booking request received");
+      
       const {
         bookingId,
         pickupLocation,
@@ -54,6 +56,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         pricing, // JSON (optional)
       } = (req.body ?? {}) as Record<string, any>;
 
+      console.log("Booking data received:", { 
+        bookingId, 
+        name, 
+        email, 
+        vehicleType, 
+        hasPricing: !!pricing 
+      });
+
       // minimal validation
       if (
         !bookingId ||
@@ -65,6 +75,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         !phone ||
         !email
       ) {
+        console.log("Validation failed - missing required fields");
         return send(res, 400, { ok: false, error: "Missing required booking fields." });
       }
 
@@ -82,6 +93,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         pricing: pricing ?? null, // must be JSON-serializable for jsonb
       };
 
+      console.log("Saving booking to Supabase:", { id: row.id, name: row.name });
+
       // upsert by id (idempotent)
       const { error } = await supabase.from("bookings").upsert(row, {
         onConflict: "id",
@@ -89,6 +102,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
 
       if (error) {
+        console.error("Supabase upsert error:", error);
         return send(res, 500, {
           ok: false,
           error: "Failed to save booking",
@@ -96,8 +110,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         });
       }
 
+      console.log("Booking saved successfully:", bookingId);
       return send(res, 200, { ok: true });
     } catch (e: any) {
+      console.error("POST /api/bookings error:", e);
       return send(res, 500, {
         ok: false,
         error: "Exception while saving booking",
@@ -108,24 +124,36 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   if (req.method === "GET") {
     try {
+      console.log("GET /api/bookings - Admin request received");
+      
       // Optional bearer auth for Admin
       const adminToken = process.env.ADMIN_API_TOKEN;
+      console.log("Admin token check:", { hasToken: !!adminToken, tokenLength: adminToken?.length });
+      
       if (adminToken) {
         const bearer = (req.headers.authorization || "").replace(/^Bearer\s+/i, "").trim();
+        console.log("Bearer token check:", { hasBearer: !!bearer, bearerLength: bearer?.length, matches: bearer === adminToken });
         if (!bearer || bearer !== adminToken) {
+          console.log("Admin auth failed - returning 401");
           return send(res, 401, { ok: false, error: "Unauthorized" });
         }
       }
 
       res.setHeader("Cache-Control", "no-store"); // avoid 304 during testing
 
+      console.log("Querying Supabase for bookings...");
       const { data, error } = await supabase
         .from("bookings")
         .select("*")
         .order("created_at", { ascending: false })
         .limit(200);
 
-      if (error) return send(res, 500, { ok: false, error: error.message });
+      if (error) {
+        console.error("Supabase error:", error);
+        return send(res, 500, { ok: false, error: error.message });
+      }
+
+      console.log("Supabase query successful:", { count: data?.length || 0, data: data?.slice(0, 2) });
 
       // normalize to camelCase that AdminDashboard expects
       const bookings =
@@ -145,8 +173,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           paymentStatus: r.payment_status ?? null,
         })) ?? [];
 
+      console.log("Returning bookings to admin:", { count: bookings.length });
       return send(res, 200, { ok: true, bookings });
     } catch (e: any) {
+      console.error("GET /api/bookings error:", e);
       return send(res, 500, { ok: false, error: e?.message || String(e) });
     }
   }
