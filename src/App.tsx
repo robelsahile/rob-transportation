@@ -210,9 +210,18 @@ export default function App() {
       const url = new URL(window.location.href);
       const orderId = url.searchParams.get("orderId") || "";
       const transactionId = url.searchParams.get("transactionId") || "";
+      const paymentId = url.searchParams.get("paymentId") || "";
       const hasCtx = !!localStorage.getItem("rt_last_payment");
+      
+      console.log("Payment success redirect params:", {
+        orderId,
+        transactionId,
+        paymentId,
+        allParams: Object.fromEntries(url.searchParams.entries())
+      });
 
-      if (!orderId && !transactionId && !hasCtx) {
+      if (!orderId && !transactionId && !paymentId && !hasCtx) {
+        console.log("No payment parameters found, redirecting to form");
         history.replaceState({}, "", "/");
         setView("form");
         return;
@@ -225,6 +234,7 @@ export default function App() {
           body: JSON.stringify({
             orderId: orderId || undefined,
             transactionId: transactionId || undefined,
+            paymentId: paymentId || undefined,
             bookingId: localStorage.getItem("rt_pending_last") || undefined,
           }),
         });

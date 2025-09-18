@@ -3,6 +3,7 @@ export const config = { runtime: "edge" };
 type ConfirmBody = {
   orderId?: string;
   transactionId?: string; // legacy param Square sometimes sends
+  paymentId?: string; // direct payment ID from Square redirect
   bookingId?: string;
 };
 
@@ -17,7 +18,7 @@ export default async function handler(req: Request) {
     return new Response("Method Not Allowed", { status: 405 });
   }
 
-  const { orderId, transactionId } = (await req.json()) as ConfirmBody;
+  const { orderId, transactionId, paymentId } = (await req.json()) as ConfirmBody;
 
   const token = process.env.SQUARE_ACCESS_TOKEN;
   const env = process.env.SQUARE_ENV || "production";
@@ -32,11 +33,27 @@ export default async function handler(req: Request) {
 
   const host = squareHost(env);
 
-  let paymentId = "";
+  let resolvedPaymentId = paymentId || "";
   let resolvedOrderId = orderId || "";
 
   try {
-    if (orderId) {
+    // If we have a direct paymentId, use it
+    if (paymentId) {
+      resolvedPaymentId = paymentId;
+      // Try to get the order ID from the payment
+      const paymentResponse = await fetch(`${host}/v2/payments/${paymentId}`, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+          "Square-Version": "2023-10-18",
+        },
+      });
+      const paymentData = await paymentResponse.json();
+      if (paymentData.payment?.order_id) {
+        resolvedOrderId = paymentData.payment.order_id;
+      }
+    } else if (orderId) {
       // Prefer: Search Payments by order_id to obtain a canonical payment id
       const search = await fetch(`${host}/v2/payments/search`, {
         method: "POST",
@@ -48,23 +65,24 @@ export default async function handler(req: Request) {
         body: JSON.stringify({ query: { filter: { order_ids: [orderId] } }, limit: 1 }),
       });
       const s = await search.json();
-      paymentId = s?.payments?.[0]?.id || "";
+      resolvedPaymentId = s?.payments?.[0]?.id || "";
       resolvedOrderId = s?.payments?.[0]?.order_id || resolvedOrderId;
     }
 
     // Fallback: if Square redirected with transactionId only (older behavior)
-    if (!paymentId && transactionId) {
+    if (!resolvedPaymentId && transactionId) {
       // We cannot reliably translate transactionId -> paymentId across all accounts;
       // return it as-is so the UI still shows an ID.
-      paymentId = transactionId;
+      resolvedPaymentId = transactionId;
     }
   } catch (e) {
+    console.error("Error resolving payment details:", e);
     // swallow and let UI proceed with whatever ID we have
   }
 
   return Response.json({
     ok: true,
     orderId: resolvedOrderId || null,
-    paymentId: paymentId || null,
+    paymentId: resolvedPaymentId || null,
   });
 }
