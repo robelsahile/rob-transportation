@@ -58,9 +58,17 @@ export default function PaymentSuccess({
 
   // Automatically send receipt when component loads with all required data
   useEffect(() => {
-    if (bookingId && booking && paymentId && !receiptStatus.sending && !receiptStatus.sent) {
-      sendReceipt();
-    }
+    (async () => {
+      if (!bookingId || !booking) return;
+      // Ensure Admin receives booking immediately upon success (idempotent)
+      try {
+        await postToAdmin();
+      } catch {}
+
+      if (paymentId && !receiptStatus.sending && !receiptStatus.sent) {
+        sendReceipt();
+      }
+    })();
   }, [bookingId, booking, paymentId]);
 
   const totalDisplay = useMemo(() => {

@@ -276,7 +276,13 @@ export default function App() {
 
   // Admin list loader
   useEffect(() => {
-    const ADMIN_TOKEN = import.meta.env.VITE_ADMIN_API_TOKEN as string | undefined;
+    const ADMIN_TOKEN = ((): string | undefined => {
+      try {
+        return localStorage.getItem("rob_admin_token") || (import.meta.env.VITE_ADMIN_API_TOKEN as string | undefined);
+      } catch {
+        return import.meta.env.VITE_ADMIN_API_TOKEN as string | undefined;
+      }
+    })();
     console.log("Admin loader effect triggered:", { view, isAuthed, hasToken: !!ADMIN_TOKEN });
     
     if (view !== "admin" || !isAuthed) {

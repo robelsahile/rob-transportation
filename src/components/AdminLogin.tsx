@@ -20,6 +20,11 @@ const AdminLogin: React.FC<Props> = ({ onSuccess }) => {
     }
     if (password === expected) {
       localStorage.setItem("rob_admin_authed", "1");
+      // Persist admin API token (used by admin loader headers)
+      try {
+        const apiToken = import.meta.env.VITE_ADMIN_API_TOKEN as string | undefined;
+        if (apiToken) localStorage.setItem("rob_admin_token", apiToken);
+      } catch {}
       onSuccess();
     } else {
       setErr("Invalid password.");
