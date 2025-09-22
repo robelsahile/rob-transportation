@@ -48,6 +48,7 @@ export interface BookingData {
   email: string;
   flightNumber?: string;
   pricing?: PricingSnapshot | null;
+  vehicleSelectionId?: string; // Format: yyyyMMdd-xxx-nnnn (date-lastName-sequence)
 }
 
 // For booking form (before saving)

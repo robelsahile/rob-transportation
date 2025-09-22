@@ -175,8 +175,8 @@ export default function AdminDashboard({
                   </div>
                 </div>
 
-                {/* Bottom row: vehicle + flight */}
-                <div className="mt-3 pt-2 border-t border-slate-200 grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+                {/* Bottom row: vehicle + flight + vehicle selection ID */}
+                <div className="mt-3 pt-2 border-t border-slate-200 grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
                   <div>
                     <strong>Vehicle:</strong>{" "}
                     <span className="text-brand-text">{b.vehicleType ?? "—"}</span>
@@ -184,6 +184,12 @@ export default function AdminDashboard({
                   <div>
                     <strong>Flight:</strong>{" "}
                     <span className="text-brand-text">{b.flightNumber ?? "—"}</span>
+                  </div>
+                  <div>
+                    <strong>Vehicle Selection ID:</strong>{" "}
+                    <span className="text-brand-text font-mono text-xs bg-slate-100 px-2 py-1 rounded">
+                      {b.vehicleSelectionId ?? "—"}
+                    </span>
                   </div>
                 </div>
 

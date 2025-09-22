@@ -29,6 +29,32 @@ function send(res: VercelResponse, status: number, body: any) {
   res.send(JSON.stringify(body));
 }
 
+// Generate vehicle selection ID in format: yyyyMMdd-xxx-nnnn
+async function generateVehicleSelectionId(dateTime: string, customerName: string): Promise<string> {
+  const date = new Date(dateTime);
+  const yyyyMMdd = date.toISOString().slice(0, 10).replace(/-/g, '');
+  
+  // Extract last 3 digits of customer's last name
+  const nameParts = customerName.trim().split(' ');
+  const lastName = nameParts[nameParts.length - 1] || '';
+  const lastThreeChars = lastName.slice(-3).toUpperCase().padEnd(3, 'X');
+  
+  // Get the next sequential booking number for today
+  const bookingDate = yyyyMMdd;
+  const { data: existingBookings } = await supabase
+    .from('bookings')
+    .select('vehicle_selection_id')
+    .like('vehicle_selection_id', `${bookingDate}-%`)
+    .order('created_at', { ascending: false });
+  
+  // Count existing bookings for today to get next sequence number
+  const todayBookingsCount = existingBookings?.length || 0;
+  const nextSequence = todayBookingsCount + 1;
+  const sequenceStr = nextSequence.toString().padStart(4, '0');
+  
+  return `${yyyyMMdd}-${lastThreeChars}-${sequenceStr}`;
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // CORS / preflight
   if (req.method === "OPTIONS") {
@@ -79,6 +105,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return send(res, 400, { ok: false, error: "Missing required booking fields." });
       }
 
+      // Generate vehicle selection ID
+      const vehicleSelectionId = await generateVehicleSelectionId(dateTime, name);
+      console.log("Generated vehicle selection ID:", vehicleSelectionId);
+
       // map camelCase -> snake_case for DB
       const row: any = {
         id: String(bookingId),
@@ -91,6 +121,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         email: String(email),
         flight_number: flightNumber ? String(flightNumber) : null,
         pricing: pricing ?? null, // must be JSON-serializable for jsonb
+        vehicle_selection_id: vehicleSelectionId,
       };
 
       console.log("Saving booking to Supabase:", { id: row.id, name: row.name });
@@ -171,6 +202,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           pricing: r.pricing ?? null,
           paymentId: r.payment_id ?? null,
           paymentStatus: r.payment_status ?? null,
+          vehicleSelectionId: r.vehicle_selection_id ?? null,
         })) ?? [];
 
       console.log("Returning bookings to admin:", { count: bookings.length });

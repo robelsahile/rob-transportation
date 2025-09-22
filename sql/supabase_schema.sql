@@ -21,6 +21,9 @@ create table if not exists public.bookings (
 alter table public.bookings add column if not exists payment_id text;
 alter table public.bookings add column if not exists payment_status text;
 
+-- Add vehicle selection ID column (format: yyyyMMdd-xxx-nnnn)
+alter table public.bookings add column if not exists vehicle_selection_id text;
+
 -- Helpful index
 create index if not exists bookings_created_at_idx on public.bookings (created_at desc);
 
