@@ -8,7 +8,7 @@ type HeaderProps = {
 const Header: React.FC<HeaderProps> = ({ onNavigateHome }) => {
   return (
     <header className="bg-brand-primary shadow-lg">
-      <div className="container mx-auto px-4 py-6 max-w-2xl">
+      <div className="container mx-auto px-4 py-6 max-w-6xl">
         {/* Title is clickable */}
         <h1
           onClick={onNavigateHome}

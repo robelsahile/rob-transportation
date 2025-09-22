@@ -2,12 +2,18 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
+import HeroSection from "./components/HeroSection";
+import TestimonialsSection from "./components/TestimonialsSection";
 import BookingForm from "./components/BookingForm";
 import ReviewBooking from "./components/ReviewBooking";
 import AdminDashboard from "./components/AdminDashboard";
 import AdminLogin from "./components/AdminLogin";
 import PaymentPage from "./components/PaymentPage";
 import PaymentSuccess from "./components/PaymentSuccess";
+import Blog from "./components/Blog";
+import AboutUs from "./components/AboutUs";
+import ContactUs from "./components/ContactUs";
+import TopCities from "./components/TopCities";
 import { VEHICLE_OPTIONS } from "./constants";
 import {
   BookingFormData,
@@ -16,7 +22,7 @@ import {
   VehicleType,
 } from "./types";
 
-type View = "form" | "review" | "payment" | "success" | "admin";
+type View = "form" | "review" | "payment" | "success" | "admin" | "blog" | "about" | "contact" | "cities";
 
 const initialBooking: BookingFormData = {
   pickupLocation: "",
@@ -155,6 +161,10 @@ export default function App() {
 
   const handleNavigateToAdmin = useCallback(() => setView("admin"), []);
   const handleNavigateToCustomer = useCallback(() => setView("form"), []);
+  const handleNavigateToBlog = useCallback(() => setView("blog"), []);
+  const handleNavigateToAbout = useCallback(() => setView("about"), []);
+  const handleNavigateToContact = useCallback(() => setView("contact"), []);
+  const handleNavigateToCities = useCallback(() => setView("cities"), []);
   const handleLogout = useCallback(() => {
     localStorage.removeItem("rob_admin_authed");
     setIsAuthed(false);
@@ -318,84 +328,122 @@ export default function App() {
   }, [view, isAuthed]);
 
   return (
-    <div className="min-h-screen flex flex-col bg-brand-bg text-brand-text">
+    <div className="min-h-screen flex flex-col">
       <Header onNavigateHome={() => setView("form")} />
 
-      <main className="flex-grow container mx-auto px-4 sm:px-8 py-8 max-w-5xl">
+      {/* Hero Section - Only show on main form view */}
+      {view === "form" && <HeroSection />}
+
+      <main className="flex-grow bg-brand-bg">
         {view === "form" && (
-          <BookingForm
-            bookingDetails={bookingDetails}
-            onInputChange={handleInputChange}
-            onVehicleSelect={handleVehicleSelect}
-            onSubmit={handleSubmit}
-            vehicleOptions={vehicleOptions}
-          />
+          <div className="container mx-auto px-4 sm:px-8 py-8 max-w-5xl">
+            <BookingForm
+              bookingDetails={bookingDetails}
+              onInputChange={handleInputChange}
+              onVehicleSelect={handleVehicleSelect}
+              onSubmit={handleSubmit}
+              vehicleOptions={vehicleOptions}
+            />
+          </div>
         )}
 
         {view === "review" && (
-          <ReviewBooking
-            data={bookingDetails}
-            onEdit={() => setView("form")}
-            onConfirm={handleConfirmFromReview}
-          />
+          <div className="container mx-auto px-4 sm:px-8 py-8 max-w-5xl">
+            <ReviewBooking
+              data={bookingDetails}
+              onEdit={() => setView("form")}
+              onConfirm={handleConfirmFromReview}
+            />
+          </div>
         )}
 
         {view === "payment" && (
-          <PaymentPage
-            bookingId={bookingId}
-            totalAmount={lastTotal}
-            customerName={`${bookingDetails.name}`.trim()}
-            customerEmail={bookingDetails.email}
-            onBack={() => setView("review")}
-            onPaid={handlePaymentSuccess}
-          />
+          <div className="container mx-auto px-4 sm:px-8 py-8 max-w-5xl">
+            <PaymentPage
+              bookingId={bookingId}
+              totalAmount={lastTotal}
+              customerName={`${bookingDetails.name}`.trim()}
+              customerEmail={bookingDetails.email}
+              onBack={() => setView("review")}
+              onPaid={handlePaymentSuccess}
+            />
+          </div>
         )}
 
         {view === "success" && (
-          <PaymentSuccess
-            paymentId={paymentId}
-            onDone={() => {
-              // Reset the app to a clean home form
-              setBookingDetails(initialBooking);
-              setBookingId("");
-              setPaymentId("");
-              (window as any).__lastPricing = null;
-              setView("form");
-            }}
-          />
+          <div className="container mx-auto px-4 sm:px-8 py-8 max-w-5xl">
+            <PaymentSuccess
+              paymentId={paymentId}
+              onDone={() => {
+                // Reset the app to a clean home form
+                setBookingDetails(initialBooking);
+                setBookingId("");
+                setPaymentId("");
+                (window as any).__lastPricing = null;
+                setView("form");
+              }}
+            />
+          </div>
         )}
 
         {view === "admin" && (
-          isAuthed ? (
-            <div className="space-y-4">
-              <div className="flex justify-end">
-                <button
-                  type="button"
-                  onClick={handleLogout}
-                  className="text-sm underline underline-offset-4 hover:opacity-80"
-                >
-                  Log out
-                </button>
+          <div className="container mx-auto px-4 sm:px-8 py-8 max-w-5xl">
+            {isAuthed ? (
+              <div className="space-y-4">
+                <div className="flex justify-end">
+                  <button
+                    type="button"
+                    onClick={handleLogout}
+                    className="text-sm underline underline-offset-4 hover:opacity-80"
+                  >
+                    Log out
+                  </button>
+                </div>
+                <AdminDashboard
+                  bookings={bookings}
+                  onNavigateToCustomer={handleNavigateToCustomer}
+                  isLoading={isLoadingBookings}
+                />
               </div>
-              <AdminDashboard
-                bookings={bookings}
-                onNavigateToCustomer={handleNavigateToCustomer}
-                isLoading={isLoadingBookings}
+            ) : (
+              <AdminLogin
+                onSuccess={() => {
+                  console.log("Admin login successful, setting auth and view");
+                  setIsAuthed(true);
+                  setView("admin");
+                }}
               />
-            </div>
-          ) : (
-            <AdminLogin
-              onSuccess={() => {
-                console.log("Admin login successful, setting auth and view");
-                setIsAuthed(true);
-                setView("admin");
-              }}
-            />
-          )
+            )}
+          </div>
+        )}
+
+        {view === "blog" && (
+          <Blog onNavigateHome={() => setView("form")} />
+        )}
+
+        {view === "about" && (
+          <AboutUs onNavigateHome={() => setView("form")} />
+        )}
+
+        {view === "contact" && (
+          <ContactUs onNavigateHome={() => setView("form")} />
+        )}
+
+        {view === "cities" && (
+          <TopCities onNavigateHome={() => setView("form")} />
         )}
       </main>
 
-      <Footer onNavigateToAdmin={handleNavigateToAdmin} />
+      {/* Testimonials Section - Only show on main form view */}
+      {view === "form" && <TestimonialsSection />}
+
+      <Footer 
+        onNavigateToAdmin={handleNavigateToAdmin}
+        onNavigateToBlog={handleNavigateToBlog}
+        onNavigateToAbout={handleNavigateToAbout}
+        onNavigateToContact={handleNavigateToContact}
+        onNavigateToCities={handleNavigateToCities}
+      />
     </div>
   );
 }
