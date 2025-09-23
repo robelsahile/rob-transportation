@@ -39,4 +39,12 @@ as $$
   select nextval('booking_counter_seq')::integer;
 $$;
 
+-- Enable RLS on bookings table
+alter table public.bookings enable row level security;
+
+-- RLS Policies for bookings table
+-- Allow service role to perform all operations (for API access)
+create policy "Service role can manage bookings" on public.bookings
+  for all using (auth.role() = 'service_role');
+
 commit;
