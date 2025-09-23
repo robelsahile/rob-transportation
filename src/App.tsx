@@ -22,6 +22,19 @@ import {
   VehicleType,
 } from "./types";
 
+// Custom hook to handle scroll to top functionality
+function useScrollToTop() {
+  const scrollToTop = useCallback(() => {
+    window.scrollTo({
+      top: 0,
+      left: 0,
+      behavior: 'smooth'
+    });
+  }, []);
+
+  return scrollToTop;
+}
+
 type View = "form" | "review" | "payment" | "success" | "admin" | "blog" | "about" | "contact" | "cities";
 
 const initialBooking: BookingFormData = {
@@ -63,6 +76,17 @@ export default function App() {
   );
 
   const vehicleOptions: VehicleOption[] = useMemo(() => VEHICLE_OPTIONS, []);
+  const scrollToTop = useScrollToTop();
+
+  // Scroll to top whenever the view changes
+  useEffect(() => {
+    scrollToTop();
+  }, [view, scrollToTop]);
+
+  // Scroll to top on initial page load/refresh
+  useEffect(() => {
+    scrollToTop();
+  }, [scrollToTop]);
 
   const handleInputChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
