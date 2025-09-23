@@ -372,8 +372,6 @@ body {
 .time-picker-scroll {
   overflow-y: auto !important;
   scroll-behavior: smooth !important;
-  /* Legacy iOS smooth scrolling support */
-  -webkit-overflow-scrolling: touch !important;
 }
 
 .time-picker-scroll::-webkit-scrollbar {
