@@ -150,59 +150,46 @@ const BookingForm: React.FC<BookingFormProps> = ({
         console.log("🔍 Found pickup input:", !!pickupInput);
         console.log("🔍 Found dropoff input:", !!dropoffInput);
 
-        // Function to constrain dropdown width to input field
-        const constrainDropdownWidth = (inputElement: HTMLInputElement) => {
+        // Simple fix for pickup location dropdown alignment
+        const fixPickupDropdown = () => {
           const pacContainer = document.querySelector('.pac-container') as HTMLElement;
-          if (pacContainer && inputElement) {
-            const inputRect = inputElement.getBoundingClientRect();
-            const inputWidth = inputRect.width;
+          if (pacContainer && pickupInput) {
+            const inputParent = pickupInput.closest('.relative') as HTMLElement;
             
-            // Set the dropdown width to match the input field exactly
-            pacContainer.style.width = inputWidth + 'px';
-            pacContainer.style.maxWidth = inputWidth + 'px';
-            pacContainer.style.minWidth = '0px';
-            pacContainer.style.left = '0px';
-            pacContainer.style.right = 'auto';
-            pacContainer.style.position = 'absolute';
-            pacContainer.style.top = '100%';
-            pacContainer.style.overflowX = 'hidden';
-            pacContainer.style.boxSizing = 'border-box';
+            if (inputParent) {
+              // Position relative to the input's parent container
+              pacContainer.style.position = 'absolute';
+              pacContainer.style.top = '100%';
+              pacContainer.style.left = '0px';
+              pacContainer.style.right = '0px';
+              pacContainer.style.width = '100%';
+              pacContainer.style.maxWidth = '100%';
+              pacContainer.style.transform = 'translateX(0)';
+              pacContainer.style.marginLeft = '0px';
+              pacContainer.style.marginRight = '0px';
+            }
           }
         };
 
-        // Set up MutationObserver to watch for pac-container creation
+        // Watch for dropdown creation and fix pickup only
         const observer = new MutationObserver((mutations) => {
           mutations.forEach((mutation) => {
             if (mutation.type === 'childList') {
               const pacContainer = document.querySelector('.pac-container') as HTMLElement;
-              if (pacContainer) {
-                const activeInput = document.activeElement as HTMLInputElement;
-                if (activeInput && (activeInput === pickupInput || activeInput === dropoffInput)) {
-                  constrainDropdownWidth(activeInput);
-                  
-                  // Force the width again after a short delay to override Google's calculations
-                  setTimeout(() => constrainDropdownWidth(activeInput), 10);
-                  setTimeout(() => constrainDropdownWidth(activeInput), 50);
-                }
+              if (pacContainer && document.activeElement === pickupInput) {
+                setTimeout(fixPickupDropdown, 10);
               }
             }
           });
         });
 
-        // Start observing
-        observer.observe(document.body, {
-          childList: true,
-          subtree: true
-        });
+        observer.observe(document.body, { childList: true, subtree: true });
 
-        // Add event listeners for both inputs
+        // Fix pickup dropdown on focus
         if (pickupInput) {
-          pickupInput.addEventListener('focus', () => constrainDropdownWidth(pickupInput));
-          pickupInput.addEventListener('input', () => constrainDropdownWidth(pickupInput));
-        }
-        if (dropoffInput) {
-          dropoffInput.addEventListener('focus', () => constrainDropdownWidth(dropoffInput));
-          dropoffInput.addEventListener('input', () => constrainDropdownWidth(dropoffInput));
+          pickupInput.addEventListener('focus', () => {
+            setTimeout(fixPickupDropdown, 100);
+          });
         }
 
         if (pickupInput) {
@@ -214,12 +201,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
               componentRestrictions: { country: 'us' }
             });
             
-            // Add event listener to resize dropdown when it appears
-            pickupInput.addEventListener('focus', () => {
-              constrainDropdownWidth(pickupInput);
-              setTimeout(() => constrainDropdownWidth(pickupInput), 50);
-              setTimeout(() => constrainDropdownWidth(pickupInput), 100);
-            });
+            // Dropdown positioning is handled by the main focus event listener
             pickupAutocomplete.addListener("place_changed", () => {
               const place = pickupAutocomplete.getPlace();
               console.log("📍 Pickup place selected:", place);
@@ -242,12 +224,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
               componentRestrictions: { country: 'us' }
             });
             
-            // Add event listener to resize dropdown when it appears
-            dropoffInput.addEventListener('focus', () => {
-              constrainDropdownWidth(dropoffInput);
-              setTimeout(() => constrainDropdownWidth(dropoffInput), 50);
-              setTimeout(() => constrainDropdownWidth(dropoffInput), 100);
-            });
+            // Dropdown positioning is handled by the main focus event listener
             dropoffAutocomplete.addListener("place_changed", () => {
               const place = dropoffAutocomplete.getPlace();
               console.log("📍 Dropoff place selected:", place);
