@@ -5,6 +5,172 @@ body {
     "Helvetica Neue", Arial, sans-serif;
 }
 
+/* Google Maps Autocomplete Fixes - Force exact input width */
+.pac-container {
+  z-index: 99999 !important;
+  border-radius: 8px !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
+  border: 1px solid #e5e7eb !important;
+  margin-top: 4px !important;
+  position: absolute !important;
+  background: white !important;
+  max-height: 200px !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  box-sizing: border-box !important;
+  transform: translateX(0) !important;
+}
+
+.pac-item {
+  cursor: pointer !important;
+  border-bottom: 1px solid #f3f4f6 !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  max-width: 100% !important;
+}
+
+.pac-item:hover {
+  background-color: #f9fafb !important;
+}
+
+.pac-item:last-child {
+  border-bottom: none !important;
+}
+
+.pac-matched {
+  font-weight: 600 !important;
+  color: #1f2937 !important;
+}
+
+/* Style the main location name */
+.pac-item-query:first-child {
+  font-weight: 500 !important;
+  color: #1f2937 !important;
+  font-size: 14px !important;
+  line-height: 1.2 !important;
+  flex: 1 !important;
+  min-width: 0 !important;
+}
+
+/* Style the address line */
+.pac-item-query:not(:first-child) {
+  font-weight: 400 !important;
+  color: #6b7280 !important;
+  font-size: 12px !important;
+  line-height: 1.2 !important;
+  margin-left: 0 !important;
+  flex-shrink: 0 !important;
+  white-space: nowrap !important;
+}
+
+/* Ensure proper spacing between items - horizontal layout */
+.pac-item {
+  padding: 4px 8px !important;
+  min-height: 24px !important;
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+/* Make the entire pac-item text more compact */
+.pac-item * {
+  max-width: 100% !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+/* Left pin icon - small and aligned */
+.pac-item .pac-icon {
+  width: 16px !important;
+  height: 16px !important;
+  margin-right: 4px !important;
+  opacity: 0.6 !important;
+  flex: 0 0 auto !important;
+}
+
+/* Ensure the main location name can truncate properly */
+.pac-item-query:first-child {
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+/* Ensure the address line can truncate properly */
+.pac-item-query:not(:first-child) {
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+/* EXACT two-part horizontal: name (left), address (right) */
+.pac-item .pac-item-query {
+  font-weight: 600 !important;
+  color: #111827 !important; /* gray-900 */
+  font-size: 14px !important;
+}
+
+.pac-item .pac-item-query + span {
+  color: #6b7280 !important; /* gray-500 */
+  font-size: 12px !important;
+  margin-left: 0 !important;
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+}
+
+/* Ensure the dropdown is constrained to its parent input field */
+.address-grid .relative {
+  position: relative !important;
+  overflow: visible !important;
+}
+
+.address-grid .relative .pac-container {
+  position: absolute !important;
+  top: 100% !important;
+  left: 0 !important;
+  right: 0 !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  overflow-x: hidden !important;
+  box-sizing: border-box !important;
+}
+
+/* Ensure form containers don't clip autocomplete */
+.bg-brand-surface {
+  overflow: visible !important;
+}
+
+.rounded-lg {
+  overflow: visible !important;
+}
+
+/* Grid layout fixes */
+.grid {
+  overflow: visible !important;
+}
+
+.grid > * {
+  overflow: visible !important;
+}
+
+/* Address grid specific styling */
+.address-grid {
+  position: relative !important;
+  overflow: visible !important;
+}
+
+.address-grid > * {
+  position: relative !important;
+  overflow: visible !important;
+}
+
+.address-grid .relative:focus-within {
+  z-index: 1000 !important;
+}
+
 /* Hero Section Styles */
 .hero-section {
   background: linear-gradient(to right, #1e3a8a, #1d4ed8);
@@ -200,6 +366,39 @@ body {
   90% {
     transform: translate3d(0, -4px, 0);
   }
+}
+
+/* Time Picker Scrolling Fixes */
+.time-picker-scroll {
+  overflow-y: auto !important;
+  scroll-behavior: smooth !important;
+  /* Legacy iOS smooth scrolling support */
+  -webkit-overflow-scrolling: touch !important;
+}
+
+.time-picker-scroll::-webkit-scrollbar {
+  width: 6px !important;
+}
+
+.time-picker-scroll::-webkit-scrollbar-track {
+  background: transparent !important;
+}
+
+.time-picker-scroll::-webkit-scrollbar-thumb {
+  background-color: #cbd5e1 !important;
+  border-radius: 3px !important;
+}
+
+.time-picker-scroll::-webkit-scrollbar-thumb:hover {
+  background-color: #94a3b8 !important;
+}
+
+/* Ensure time picker buttons are properly interactive */
+.time-picker-button {
+  display: block !important;
+  width: 100% !important;
+  touch-action: manipulation !important;
+  -webkit-tap-highlight-color: transparent !important;
 }
 
 /* Mobile-specific adjustments */

@@ -222,7 +222,7 @@ const TimeWheel: React.FC<WheelProps> = ({ initial, onConfirm, onClose, minTimeF
       ) : (
         <div className="grid grid-cols-3 gap-3">
           {/* Hour */}
-          <div className="max-h-44 overflow-y-auto rounded-md border border-slate-200">
+          <div className="max-h-44 time-picker-scroll rounded-md border border-slate-200">
             {hours.map((hh) => {
               const disabled = hourDisabled(hh);
               return (
@@ -230,8 +230,8 @@ const TimeWheel: React.FC<WheelProps> = ({ initial, onConfirm, onClose, minTimeF
                   key={hh}
                   type="button"
                   className={[
-                    "w-full py-2 text-sm",
-                    disabled ? "opacity-40 cursor-not-allowed" : "hover:bg-slate-100",
+                    "time-picker-button py-2 text-sm",
+                    disabled ? "opacity-40 cursor-not-allowed" : "hover:bg-slate-100 cursor-pointer",
                     h === hh && !disabled ? "bg-slate-100 font-semibold" : ""
                   ].join(" ")}
                   onClick={() => !disabled && handlePickHour(hh)}
@@ -245,7 +245,7 @@ const TimeWheel: React.FC<WheelProps> = ({ initial, onConfirm, onClose, minTimeF
           </div>
 
           {/* Minute */}
-          <div className="max-h-44 overflow-y-auto rounded-md border border-slate-200">
+          <div className="max-h-44 time-picker-scroll rounded-md border border-slate-200">
             {minutes.map((mm) => {
               const disabled = minuteDisabled(mm);
               return (
@@ -253,8 +253,8 @@ const TimeWheel: React.FC<WheelProps> = ({ initial, onConfirm, onClose, minTimeF
                   key={mm}
                   type="button"
                   className={[
-                    "w-full py-2 text-sm",
-                    disabled ? "opacity-40 cursor-not-allowed" : "hover:bg-slate-100",
+                    "time-picker-button py-2 text-sm",
+                    disabled ? "opacity-40 cursor-not-allowed" : "hover:bg-slate-100 cursor-pointer",
                     m === mm && !disabled ? "bg-slate-100 font-semibold" : ""
                   ].join(" ")}
                   onClick={() => !disabled && handlePickMinute(mm)}

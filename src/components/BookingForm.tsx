@@ -1,6 +1,6 @@
 /// <reference types="google.maps" />
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useRef } from "react";
 import { BookingFormData, VehicleOption, VehicleType } from "../types";
 import TextInput from "./TextInput";
 import DateTimePicker from "./DateTimePicker";
@@ -66,6 +66,7 @@ function formatPlaceDisplay(place: google.maps.places.PlaceResult, fallback: str
   return name || addr || fallback;
 }
 
+
 type AddressFieldProps = {
   label: string;
   name: "pickupLocation" | "dropoffLocation";
@@ -74,6 +75,7 @@ type AddressFieldProps = {
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   Icon: React.FC<React.SVGProps<SVGSVGElement>>;
   required?: boolean;
+  inputRef?: React.RefObject<HTMLInputElement>;
 };
 
 const AddressField: React.FC<AddressFieldProps> = ({
@@ -84,6 +86,7 @@ const AddressField: React.FC<AddressFieldProps> = ({
   onChange,
   Icon,
   required,
+  inputRef,
 }) => {
   // Display only the first line in the input (avoid overlay/caret mismatch)
   const displayText = value.includes("\n") ? value.split("\n")[0] : value;
@@ -99,6 +102,7 @@ const AddressField: React.FC<AddressFieldProps> = ({
           <Icon className="h-5 w-5 text-slate-500" />
         </div>
         <input
+          ref={inputRef}
           name={name}
           value={displayText}
           onChange={onChange}
@@ -123,6 +127,8 @@ const BookingForm: React.FC<BookingFormProps> = ({
   onSubmit,
   vehicleOptions,
 }) => {
+  const pickupInputRef = useRef<HTMLInputElement>(null);
+  const dropoffInputRef = useRef<HTMLInputElement>(null);
   useEffect(() => {
     const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string | undefined;
     console.log("🔍 Google Maps API Key:", apiKey ? "Found" : "Missing");
@@ -136,49 +142,125 @@ const BookingForm: React.FC<BookingFormProps> = ({
     loadGoogleMaps(apiKey).then(() => {
       console.log("✅ Google Maps loaded successfully");
       
-      const pickupInput = document.querySelector<HTMLInputElement>("input[name='pickupLocation']");
-      const dropoffInput = document.querySelector<HTMLInputElement>("input[name='dropoffLocation']");
+      // Add a small delay to ensure DOM is fully rendered
+      setTimeout(() => {
+        const pickupInput = pickupInputRef.current;
+        const dropoffInput = dropoffInputRef.current;
 
-      console.log("🔍 Found pickup input:", !!pickupInput);
-      console.log("🔍 Found dropoff input:", !!dropoffInput);
+        console.log("🔍 Found pickup input:", !!pickupInput);
+        console.log("🔍 Found dropoff input:", !!dropoffInput);
 
-      if (pickupInput) {
-        console.log("🎯 Initializing pickup autocomplete...");
-        try {
-          const pickupAutocomplete = new google.maps.places.Autocomplete(pickupInput, {
-            fields: ["formatted_address", "geometry", "name"],
+        // Function to constrain dropdown width to input field
+        const constrainDropdownWidth = (inputElement: HTMLInputElement) => {
+          const pacContainer = document.querySelector('.pac-container') as HTMLElement;
+          if (pacContainer && inputElement) {
+            const inputRect = inputElement.getBoundingClientRect();
+            const inputWidth = inputRect.width;
+            
+            // Set the dropdown width to match the input field exactly
+            pacContainer.style.width = inputWidth + 'px';
+            pacContainer.style.maxWidth = inputWidth + 'px';
+            pacContainer.style.minWidth = '0px';
+            pacContainer.style.left = '0px';
+            pacContainer.style.right = 'auto';
+            pacContainer.style.position = 'absolute';
+            pacContainer.style.top = '100%';
+            pacContainer.style.overflowX = 'hidden';
+            pacContainer.style.boxSizing = 'border-box';
+          }
+        };
+
+        // Set up MutationObserver to watch for pac-container creation
+        const observer = new MutationObserver((mutations) => {
+          mutations.forEach((mutation) => {
+            if (mutation.type === 'childList') {
+              const pacContainer = document.querySelector('.pac-container') as HTMLElement;
+              if (pacContainer) {
+                const activeInput = document.activeElement as HTMLInputElement;
+                if (activeInput && (activeInput === pickupInput || activeInput === dropoffInput)) {
+                  constrainDropdownWidth(activeInput);
+                  
+                  // Force the width again after a short delay to override Google's calculations
+                  setTimeout(() => constrainDropdownWidth(activeInput), 10);
+                  setTimeout(() => constrainDropdownWidth(activeInput), 50);
+                }
+              }
+            }
           });
-          pickupAutocomplete.addListener("place_changed", () => {
-            const place = pickupAutocomplete.getPlace();
-            console.log("📍 Pickup place selected:", place);
-            const value = formatPlaceDisplay(place, pickupInput.value);
-            const evt = { target: { name: "pickupLocation", value } } as React.ChangeEvent<HTMLInputElement>;
-            onInputChange(evt);
-          });
-          console.log("✅ Pickup autocomplete initialized");
-        } catch (error) {
-          console.error("❌ Error initializing pickup autocomplete:", error);
+        });
+
+        // Start observing
+        observer.observe(document.body, {
+          childList: true,
+          subtree: true
+        });
+
+        // Add event listeners for both inputs
+        if (pickupInput) {
+          pickupInput.addEventListener('focus', () => constrainDropdownWidth(pickupInput));
+          pickupInput.addEventListener('input', () => constrainDropdownWidth(pickupInput));
         }
-      }
-
-      if (dropoffInput) {
-        console.log("🎯 Initializing dropoff autocomplete...");
-        try {
-          const dropoffAutocomplete = new google.maps.places.Autocomplete(dropoffInput, {
-            fields: ["formatted_address", "geometry", "name"],
-          });
-          dropoffAutocomplete.addListener("place_changed", () => {
-            const place = dropoffAutocomplete.getPlace();
-            console.log("📍 Dropoff place selected:", place);
-            const value = formatPlaceDisplay(place, dropoffInput.value);
-            const evt = { target: { name: "dropoffLocation", value } } as React.ChangeEvent<HTMLInputElement>;
-            onInputChange(evt);
-          });
-          console.log("✅ Dropoff autocomplete initialized");
-        } catch (error) {
-          console.error("❌ Error initializing dropoff autocomplete:", error);
+        if (dropoffInput) {
+          dropoffInput.addEventListener('focus', () => constrainDropdownWidth(dropoffInput));
+          dropoffInput.addEventListener('input', () => constrainDropdownWidth(dropoffInput));
         }
-      }
+
+        if (pickupInput) {
+          console.log("🎯 Initializing pickup autocomplete...");
+          try {
+            const pickupAutocomplete = new google.maps.places.Autocomplete(pickupInput, {
+              fields: ["formatted_address", "geometry", "name"],
+              types: ['establishment', 'geocode'],
+              componentRestrictions: { country: 'us' }
+            });
+            
+            // Add event listener to resize dropdown when it appears
+            pickupInput.addEventListener('focus', () => {
+              constrainDropdownWidth(pickupInput);
+              setTimeout(() => constrainDropdownWidth(pickupInput), 50);
+              setTimeout(() => constrainDropdownWidth(pickupInput), 100);
+            });
+            pickupAutocomplete.addListener("place_changed", () => {
+              const place = pickupAutocomplete.getPlace();
+              console.log("📍 Pickup place selected:", place);
+              const value = formatPlaceDisplay(place, pickupInput.value);
+              const evt = { target: { name: "pickupLocation", value } } as React.ChangeEvent<HTMLInputElement>;
+              onInputChange(evt);
+            });
+            console.log("✅ Pickup autocomplete initialized");
+          } catch (error) {
+            console.error("❌ Error initializing pickup autocomplete:", error);
+          }
+        }
+
+        if (dropoffInput) {
+          console.log("🎯 Initializing dropoff autocomplete...");
+          try {
+            const dropoffAutocomplete = new google.maps.places.Autocomplete(dropoffInput, {
+              fields: ["formatted_address", "geometry", "name"],
+              types: ['establishment', 'geocode'],
+              componentRestrictions: { country: 'us' }
+            });
+            
+            // Add event listener to resize dropdown when it appears
+            dropoffInput.addEventListener('focus', () => {
+              constrainDropdownWidth(dropoffInput);
+              setTimeout(() => constrainDropdownWidth(dropoffInput), 50);
+              setTimeout(() => constrainDropdownWidth(dropoffInput), 100);
+            });
+            dropoffAutocomplete.addListener("place_changed", () => {
+              const place = dropoffAutocomplete.getPlace();
+              console.log("📍 Dropoff place selected:", place);
+              const value = formatPlaceDisplay(place, dropoffInput.value);
+              const evt = { target: { name: "dropoffLocation", value } } as React.ChangeEvent<HTMLInputElement>;
+              onInputChange(evt);
+            });
+            console.log("✅ Dropoff autocomplete initialized");
+          } catch (error) {
+            console.error("❌ Error initializing dropoff autocomplete:", error);
+          }
+        }
+      }, 100);
     }).catch((error) => {
       console.error("❌ Error loading Google Maps:", error);
     });
@@ -255,7 +337,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
           onSubmit();
         }}
       >
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 mb-6 address-grid">
           <AddressField
             label="Pickup Location"
             name="pickupLocation"
@@ -264,6 +346,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
             placeholder="e.g., SeaTac International Airport"
             Icon={LocationMarkerIcon}
             required
+            inputRef={pickupInputRef}
           />
           <AddressField
             label="Drop-off Location"
@@ -273,6 +356,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
             placeholder="e.g., Space Needle, Seattle, WA"
             Icon={LocationMarkerIcon}
             required
+            inputRef={dropoffInputRef}
           />
         </div>
 
