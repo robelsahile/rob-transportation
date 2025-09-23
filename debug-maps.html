@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Google Maps Debug</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        padding: 20px;
+      }
+      input {
+        width: 300px;
+        padding: 10px;
+        margin: 10px 0;
+      }
+      .error {
+        color: red;
+      }
+      .success {
+        color: green;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Google Maps Places API Debug</h1>
+
+    <div id="status"></div>
+
+    <h2>Test Autocomplete:</h2>
+    <input type="text" id="test-input" placeholder="Type an address..." />
+
+    <script>
+      const apiKey = "AIzaSyCttTAWwt9XU6zfMfirUy_M-llFWGqt_Eo";
+      const statusDiv = document.getElementById("status");
+
+      function updateStatus(message, isError = false) {
+        statusDiv.innerHTML = `<div class="${
+          isError ? "error" : "success"
+        }">${message}</div>`;
+        console.log(message);
+      }
+
+      // Load Google Maps API
+      const script = document.createElement("script");
+      script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&callback=initMap`;
+      script.async = true;
+      script.defer = true;
+
+      script.onerror = () => {
+        updateStatus("❌ Failed to load Google Maps API script", true);
+      };
+
+      document.head.appendChild(script);
+
+      window.initMap = function () {
+        updateStatus("✅ Google Maps API loaded successfully");
+
+        try {
+          const input = document.getElementById("test-input");
+          const autocomplete = new google.maps.places.Autocomplete(input, {
+            fields: ["formatted_address", "geometry", "name"],
+          });
+
+          autocomplete.addListener("place_changed", () => {
+            const place = autocomplete.getPlace();
+            if (place.formatted_address) {
+              updateStatus(
+                `✅ Autocomplete working! Selected: ${place.formatted_address}`
+              );
+            } else {
+              updateStatus("⚠️ Place selected but no formatted_address", true);
+            }
+          });
+
+          updateStatus("✅ Autocomplete initialized successfully");
+        } catch (error) {
+          updateStatus(
+            `❌ Error initializing autocomplete: ${error.message}`,
+            true
+          );
+        }
+      };
+
+      // Check if API key is valid
+      fetch(
+        `https://maps.googleapis.com/maps/api/geocode/json?address=Seattle&key=${apiKey}`
+      )
+        .then((response) => response.json())
+        .then((data) => {
+          if (data.status === "OK") {
+            updateStatus("✅ API key is valid and working");
+          } else {
+            updateStatus(
+              `❌ API key issue: ${data.status} - ${
+                data.error_message || "Unknown error"
+              }`,
+              true
+            );
+          }
+        })
+        .catch((error) => {
+          updateStatus(
+            `❌ Network error testing API key: ${error.message}`,
+            true
+          );
+        });
+    </script>
+  </body>
+</html>

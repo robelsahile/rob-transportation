@@ -125,38 +125,62 @@ const BookingForm: React.FC<BookingFormProps> = ({
 }) => {
   useEffect(() => {
     const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string | undefined;
+    console.log("🔍 Google Maps API Key:", apiKey ? "Found" : "Missing");
+    
     if (!apiKey) {
-      console.error("Google Maps API key missing. Put it in .env.local as VITE_GOOGLE_MAPS_API_KEY");
+      console.error("❌ Google Maps API key missing. Put it in .env.local as VITE_GOOGLE_MAPS_API_KEY");
       return;
     }
 
+    console.log("🚀 Loading Google Maps...");
     loadGoogleMaps(apiKey).then(() => {
+      console.log("✅ Google Maps loaded successfully");
+      
       const pickupInput = document.querySelector<HTMLInputElement>("input[name='pickupLocation']");
       const dropoffInput = document.querySelector<HTMLInputElement>("input[name='dropoffLocation']");
 
+      console.log("🔍 Found pickup input:", !!pickupInput);
+      console.log("🔍 Found dropoff input:", !!dropoffInput);
+
       if (pickupInput) {
-        const pickupAutocomplete = new google.maps.places.Autocomplete(pickupInput, {
-          fields: ["formatted_address", "geometry", "name"],
-        });
-        pickupAutocomplete.addListener("place_changed", () => {
-          const place = pickupAutocomplete.getPlace();
-          const value = formatPlaceDisplay(place, pickupInput.value);
-          const evt = { target: { name: "pickupLocation", value } } as React.ChangeEvent<HTMLInputElement>;
-          onInputChange(evt);
-        });
+        console.log("🎯 Initializing pickup autocomplete...");
+        try {
+          const pickupAutocomplete = new google.maps.places.Autocomplete(pickupInput, {
+            fields: ["formatted_address", "geometry", "name"],
+          });
+          pickupAutocomplete.addListener("place_changed", () => {
+            const place = pickupAutocomplete.getPlace();
+            console.log("📍 Pickup place selected:", place);
+            const value = formatPlaceDisplay(place, pickupInput.value);
+            const evt = { target: { name: "pickupLocation", value } } as React.ChangeEvent<HTMLInputElement>;
+            onInputChange(evt);
+          });
+          console.log("✅ Pickup autocomplete initialized");
+        } catch (error) {
+          console.error("❌ Error initializing pickup autocomplete:", error);
+        }
       }
 
       if (dropoffInput) {
-        const dropoffAutocomplete = new google.maps.places.Autocomplete(dropoffInput, {
-          fields: ["formatted_address", "geometry", "name"],
-        });
-        dropoffAutocomplete.addListener("place_changed", () => {
-          const place = dropoffAutocomplete.getPlace();
-          const value = formatPlaceDisplay(place, dropoffInput.value);
-          const evt = { target: { name: "dropoffLocation", value } } as React.ChangeEvent<HTMLInputElement>;
-          onInputChange(evt);
-        });
+        console.log("🎯 Initializing dropoff autocomplete...");
+        try {
+          const dropoffAutocomplete = new google.maps.places.Autocomplete(dropoffInput, {
+            fields: ["formatted_address", "geometry", "name"],
+          });
+          dropoffAutocomplete.addListener("place_changed", () => {
+            const place = dropoffAutocomplete.getPlace();
+            console.log("📍 Dropoff place selected:", place);
+            const value = formatPlaceDisplay(place, dropoffInput.value);
+            const evt = { target: { name: "dropoffLocation", value } } as React.ChangeEvent<HTMLInputElement>;
+            onInputChange(evt);
+          });
+          console.log("✅ Dropoff autocomplete initialized");
+        } catch (error) {
+          console.error("❌ Error initializing dropoff autocomplete:", error);
+        }
       }
+    }).catch((error) => {
+      console.error("❌ Error loading Google Maps:", error);
     });
   }, [onInputChange]);
 
