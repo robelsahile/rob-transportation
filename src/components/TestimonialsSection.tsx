@@ -105,41 +105,83 @@ const TestimonialsSection: React.FC = () => {
 
         {/* Testimonials Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {testimonials.map((testimonial) => (
-            <div
-              key={testimonial.id}
-              className="bg-white rounded-lg shadow-lg p-6 hover:shadow-xl transition-shadow duration-300"
-            >
-              {/* Rating */}
-              <div className="flex items-center mb-4">
-                <div className="flex">{renderStars(testimonial.rating)}</div>
-                <span className="ml-2 text-sm text-brand-text-light">{testimonial.date}</span>
-              </div>
-
-              {/* Comment */}
-              <blockquote className="text-brand-text mb-4 italic">
-                "{testimonial.comment}"
-              </blockquote>
-
-              {/* Service Badge */}
-              <div className="mb-4">
-                <span className="inline-block bg-brand-primary text-white text-xs px-3 py-1 rounded-full">
-                  {testimonial.service}
-                </span>
-              </div>
-
-              {/* Customer Info */}
-              <div className="flex items-center">
-                <div className="w-10 h-10 bg-brand-primary rounded-full flex items-center justify-center text-white font-semibold">
-                  {testimonial.name.split(' ').map(n => n[0]).join('')}
+          {/* Show all testimonials on desktop */}
+          <div className="hidden md:contents">
+            {testimonials.map((testimonial) => (
+              <div
+                key={testimonial.id}
+                className="bg-white rounded-lg shadow-lg p-6 hover:shadow-xl transition-shadow duration-300"
+              >
+                {/* Rating */}
+                <div className="flex items-center mb-4">
+                  <div className="flex">{renderStars(testimonial.rating)}</div>
+                  <span className="ml-2 text-sm text-brand-text-light">{testimonial.date}</span>
                 </div>
-                <div className="ml-3">
-                  <div className="font-semibold text-brand-text">{testimonial.name}</div>
-                  <div className="text-sm text-brand-text-light">{testimonial.location}</div>
+
+                {/* Comment */}
+                <blockquote className="text-brand-text mb-4 italic">
+                  "{testimonial.comment}"
+                </blockquote>
+
+                {/* Service Badge */}
+                <div className="mb-4">
+                  <span className="inline-block bg-brand-primary text-white text-xs px-3 py-1 rounded-full">
+                    {testimonial.service}
+                  </span>
+                </div>
+
+                {/* Customer Info */}
+                <div className="flex items-center">
+                  <div className="w-10 h-10 bg-brand-primary rounded-full flex items-center justify-center text-white font-semibold">
+                    {testimonial.name.split(' ').map(n => n[0]).join('')}
+                  </div>
+                  <div className="ml-3">
+                    <div className="font-semibold text-brand-text">{testimonial.name}</div>
+                    <div className="text-sm text-brand-text-light">{testimonial.location}</div>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
+
+          {/* Show only top 3 testimonials on mobile */}
+          <div className="md:hidden space-y-6">
+            {testimonials.slice(0, 3).map((testimonial) => (
+              <div
+                key={testimonial.id}
+                className="bg-white rounded-lg shadow-lg p-6 hover:shadow-xl transition-shadow duration-300"
+              >
+                {/* Rating */}
+                <div className="flex items-center mb-4">
+                  <div className="flex">{renderStars(testimonial.rating)}</div>
+                  <span className="ml-2 text-sm text-brand-text-light">{testimonial.date}</span>
+                </div>
+
+                {/* Comment */}
+                <blockquote className="text-brand-text mb-4 italic">
+                  "{testimonial.comment}"
+                </blockquote>
+
+                {/* Service Badge */}
+                <div className="mb-4">
+                  <span className="inline-block bg-brand-primary text-white text-xs px-3 py-1 rounded-full">
+                    {testimonial.service}
+                  </span>
+                </div>
+
+                {/* Customer Info */}
+                <div className="flex items-center">
+                  <div className="w-10 h-10 bg-brand-primary rounded-full flex items-center justify-center text-white font-semibold">
+                    {testimonial.name.split(' ').map(n => n[0]).join('')}
+                  </div>
+                  <div className="ml-3">
+                    <div className="font-semibold text-brand-text">{testimonial.name}</div>
+                    <div className="text-sm text-brand-text-light">{testimonial.location}</div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
 
         {/* Call to Action */}

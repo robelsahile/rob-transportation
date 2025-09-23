@@ -331,12 +331,11 @@ export default function App() {
     <div className="min-h-screen flex flex-col">
       <Header onNavigateHome={() => setView("form")} />
 
-      {/* Hero Section - Only show on main form view */}
-      {view === "form" && <HeroSection />}
-
-      <main className="flex-grow bg-brand-bg">
-        {view === "form" && (
-          <div className="container mx-auto px-4 sm:px-8 py-8 max-w-5xl">
+      {/* Mobile Layout - Hero section first, then booking form */}
+      {view === "form" && (
+        <div className="block md:hidden">
+          <HeroSection />
+          <div className="container mx-auto px-4 sm:px-8 py-4 max-w-5xl">
             <BookingForm
               bookingDetails={bookingDetails}
               onInputChange={handleInputChange}
@@ -345,7 +344,28 @@ export default function App() {
               vehicleOptions={vehicleOptions}
             />
           </div>
-        )}
+        </div>
+      )}
+
+      {/* Desktop Layout - Hero section first */}
+      {view === "form" && (
+        <div className="hidden md:block">
+          <HeroSection />
+          <main className="flex-grow bg-brand-bg">
+            <div className="container mx-auto px-4 sm:px-8 py-8 max-w-5xl">
+              <BookingForm
+                bookingDetails={bookingDetails}
+                onInputChange={handleInputChange}
+                onVehicleSelect={handleVehicleSelect}
+                onSubmit={handleSubmit}
+                vehicleOptions={vehicleOptions}
+              />
+            </div>
+          </main>
+        </div>
+      )}
+
+      <main className="flex-grow bg-brand-bg">
 
         {view === "review" && (
           <div className="container mx-auto px-4 sm:px-8 py-8 max-w-5xl">

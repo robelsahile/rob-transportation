@@ -24,7 +24,7 @@ const HeroSection: React.FC = () => {
                 <div className="hero-check-icon">
                   <span className="hero-check-text">✓</span>
                 </div>
-                <span className="hero-benefit-text">24/7 Availability</span>
+                <span className="hero-benefit-text">Competitive Pricing</span>
               </div>
               
               <div className="hero-benefit">
@@ -66,8 +66,8 @@ const HeroSection: React.FC = () => {
             </div>
           </div>
 
-          {/* Right Column - Visual Element */}
-          <div className="hero-visual">
+          {/* Right Column - Visual Element - Hidden on mobile */}
+          <div className="hero-visual hidden-mobile">
             <div className="hero-card">
               <div>
                 <div className="hero-card-header">
