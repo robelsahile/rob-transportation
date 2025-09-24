@@ -224,15 +224,52 @@ export default function App() {
   );
 
   const handlePaymentSuccess = useCallback(
-    (pid: string) => {
+    async (pid: string) => {
       setPaymentId(pid);
       const pricing = (window as any)?.__lastPricing;
+      
+      // Save booking data for email
+      const bookingData = {
+        id: bookingId,
+        name: bookingDetails.name,
+        email: bookingDetails.email,
+        phone: bookingDetails.phone,
+        pickupLocation: bookingDetails.pickupLocation,
+        dropoffLocation: bookingDetails.dropoffLocation,
+        dateTime: bookingDetails.dateTime,
+        vehicleType: bookingDetails.vehicleType,
+        flightNumber: bookingDetails.flightNumber,
+        pricing: pricing
+      };
+
+      // Send confirmation email
+      try {
+        console.log("Sending confirmation email for booking:", bookingId);
+        const emailResponse = await fetch('/api/send-receipt-email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            ...bookingData,
+            paymentId: pid
+          })
+        });
+        
+        if (emailResponse.ok) {
+          console.log("Confirmation email sent successfully");
+        } else {
+          const errorText = await emailResponse.text();
+          console.error("Failed to send confirmation email:", errorText);
+        }
+      } catch (error) {
+        console.error("Error sending confirmation email:", error);
+      }
+
       postBookingToApi(pricing ?? null);     // always post
       if (pricing) handleSaveBooking(pricing);
 
       setView("success");
     },
-    [handleSaveBooking, postBookingToApi]
+    [bookingDetails, bookingId, handleSaveBooking, postBookingToApi]
   );
 
   // Handle /payment-success return path from Square
@@ -293,6 +330,38 @@ export default function App() {
           if (pending?.details) {
             setBookingDetails(pending.details);
             (window as any).__lastPricing = pending.pricing || null;
+            
+            // Send confirmation email for redirect flow
+            try {
+              console.log("Sending confirmation email for redirect booking:", pendingId);
+              const emailResponse = await fetch('/api/send-receipt-email', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  bookingId: pendingId,
+                  customerName: pending.details.name,
+                  customerEmail: pending.details.email,
+                  customerPhone: pending.details.phone,
+                  pickupLocation: pending.details.pickupLocation,
+                  dropoffLocation: pending.details.dropoffLocation,
+                  dateTime: pending.details.dateTime,
+                  vehicleType: pending.details.vehicleType,
+                  flightNumber: pending.details.flightNumber,
+                  pricing: pending.pricing,
+                  paymentId: j?.paymentId || j?.transactionId || paymentId || "PAID"
+                })
+              });
+              
+              if (emailResponse.ok) {
+                console.log("Confirmation email sent successfully (redirect flow)");
+              } else {
+                const errorText = await emailResponse.text();
+                console.error("Failed to send confirmation email (redirect flow):", errorText);
+              }
+            } catch (emailError) {
+              console.error("Error sending confirmation email (redirect flow):", emailError);
+            }
+            
             postBookingToApi(pending.pricing ?? null); // post even if null pricing
             if (pending.pricing) handleSaveBooking(pending.pricing);
           }

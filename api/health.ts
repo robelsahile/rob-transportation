@@ -14,6 +14,8 @@ export default async function handler(_req: VercelRequest, res: VercelResponse) 
       SQUARE_ENV: has("SQUARE_ENV"),
       SQUARE_ACCESS_TOKEN: has("SQUARE_ACCESS_TOKEN"),
       SQUARE_LOCATION_ID: has("SQUARE_LOCATION_ID"),
+      SQUARE_WEBHOOK_SIGNATURE_KEY: has("SQUARE_WEBHOOK_SIGNATURE_KEY"),
+      VITE_GOOGLE_MAPS_API_KEY: has("VITE_GOOGLE_MAPS_API_KEY"),
       PUBLIC_BASE_URL: has("PUBLIC_BASE_URL"),
       RESEND_API_KEY: has("RESEND_API_KEY"),
       TWILIO_ACCOUNT_SID: has("TWILIO_ACCOUNT_SID"),
