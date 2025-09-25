@@ -26,7 +26,7 @@ const TopCities: React.FC<TopCitiesProps> = ({ onNavigateHome }) => {
     { from: 'Seattle', to: 'Tacoma', duration: '35-50 min' },
     { from: 'Bellevue', to: 'Redmond', duration: '15-25 min' },
     { from: 'Seattle', to: 'Everett', duration: '40-60 min' },
-    { from: 'Seattle', to: 'Federal Way', duration: '30-45 min' }
+    { from: 'Seattle', to: 'SeaTac Airport', duration: '30-45 min' }
   ];
 
   return (

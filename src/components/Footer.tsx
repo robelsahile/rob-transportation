@@ -120,7 +120,7 @@ export default function Footer({
                     onClick={onNavigateToCities}
                     className="hover:opacity-90 transition-opacity"
                   >
-                    Kirkland
+                    Everett
                   </button>
                 </li>
                 <li>
