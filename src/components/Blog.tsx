@@ -62,14 +62,14 @@ const Blog: React.FC<BlogProps> = ({ onNavigateHome, resetToMainPage }) => {
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
           {/* Blog Post 1 */}
           <article 
-            className="bg-white rounded-2xl shadow-xl overflow-hidden hover:shadow-2xl hover:scale-105 transition-all duration-300 cursor-pointer"
+            className="bg-white rounded-md shadow-xl overflow-hidden hover:shadow-2xl hover:scale-105 transition-all duration-300 cursor-pointer"
             onClick={() => handlePostClick('seattle-airport-guide')}
           >
             <div className="h-48 relative overflow-hidden">
               <img 
                 src="/blog-images/seattle-airport-transportation.webp" 
                 alt="Seattle Airport Transportation Guide" 
-                className="w-full h-full object-cover"
+                className="w-full h-full object-cover rounded-t-md"
                 onError={(e) => {
                   const target = e.currentTarget as HTMLImageElement;
                   target.style.display = 'none';
@@ -90,11 +90,24 @@ const Blog: React.FC<BlogProps> = ({ onNavigateHome, resetToMainPage }) => {
 
           {/* Blog Post 2 */}
           <article 
-            className="bg-white rounded-2xl shadow-xl overflow-hidden hover:shadow-2xl hover:scale-105 transition-all duration-300 cursor-pointer"
+            className="bg-white rounded-md shadow-xl overflow-hidden hover:shadow-2xl hover:scale-105 transition-all duration-300 cursor-pointer"
             onClick={() => handlePostClick('best-time-to-book')}
           >
             <div className="h-48 relative overflow-hidden">
-              <div className="absolute inset-0 bg-gradient-to-r from-green-500 to-teal-600"></div>
+              <img 
+                src="/blog-images/Besttimetobookyourride.png" 
+                alt="Best Time to Book Your Ride" 
+                className="w-full h-full object-cover rounded-t-md"
+                onError={(e) => {
+                  const target = e.currentTarget as HTMLImageElement;
+                  target.style.display = 'none';
+                  const fallback = target.nextElementSibling as HTMLElement;
+                  if (fallback) {
+                    fallback.style.display = 'block';
+                  }
+                }}
+              />
+              <div className="absolute inset-0 bg-gradient-to-r from-green-500 to-teal-600 hidden"></div>
             </div>
             <div className="p-6">
               <h3 className="text-xl font-semibold text-gray-800 mb-2 hover:text-brand-primary transition-colors duration-300">Best Time to Book Your Ride</h3>
@@ -105,11 +118,24 @@ const Blog: React.FC<BlogProps> = ({ onNavigateHome, resetToMainPage }) => {
 
           {/* Blog Post 3 */}
           <article 
-            className="bg-white rounded-2xl shadow-xl overflow-hidden hover:shadow-2xl hover:scale-105 transition-all duration-300 cursor-pointer"
+            className="bg-white rounded-md shadow-xl overflow-hidden hover:shadow-2xl hover:scale-105 transition-all duration-300 cursor-pointer"
             onClick={() => handlePostClick('seattle-events')}
           >
             <div className="h-48 relative overflow-hidden">
-              <div className="absolute inset-0 bg-gradient-to-r from-purple-500 to-pink-600"></div>
+              <img 
+                src="/blog-images/seattleareaevents.png" 
+                alt="Seattle Area Events & Transportation" 
+                className="w-full h-full object-cover rounded-t-md"
+                onError={(e) => {
+                  const target = e.currentTarget as HTMLImageElement;
+                  target.style.display = 'none';
+                  const fallback = target.nextElementSibling as HTMLElement;
+                  if (fallback) {
+                    fallback.style.display = 'block';
+                  }
+                }}
+              />
+              <div className="absolute inset-0 bg-gradient-to-r from-purple-500 to-pink-600 hidden"></div>
             </div>
             <div className="p-6">
               <h3 className="text-xl font-semibold text-gray-800 mb-2 hover:text-brand-primary transition-colors duration-300">Seattle Area Events & Transportation</h3>

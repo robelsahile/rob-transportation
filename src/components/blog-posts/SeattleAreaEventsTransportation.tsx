@@ -46,9 +46,21 @@ const SeattleAreaEventsTransportation: React.FC<BlogPostProps> = ({ onNavigateBa
           <div className="h-1 w-20 bg-brand-primary rounded"></div>
         </header>
 
-        {/* Featured Image Placeholder */}
-        <div className="mb-8 h-64 bg-gradient-to-r from-purple-500 to-pink-600 rounded-lg flex items-center justify-center">
-          <span className="text-white text-lg font-semibold">Seattle Events & Transportation</span>
+        {/* Featured Image */}
+        <div className="mb-8 h-64 bg-gradient-to-r from-brand-primary to-blue-600 rounded-xl flex items-center justify-center relative overflow-hidden border-2 border-white shadow-lg">
+          <img 
+            src="/blog-images/seattleareaevents.png" 
+            alt="Seattle Area Events & Transportation" 
+            className="absolute inset-0 w-full h-full object-cover z-0"
+            onError={(e) => {
+              console.error('Image failed to load:', e.currentTarget.src);
+              e.currentTarget.style.display = 'none';
+            }}
+            onLoad={() => {
+              console.log('Image loaded successfully');
+            }}
+          />
+          <span className="text-white text-lg font-semibold z-10 relative drop-shadow-lg">Seattle Events & Transportation</span>
         </div>
 
         {/* Main Content with Sidebar */}
@@ -388,12 +400,12 @@ const SeattleAreaEventsTransportation: React.FC<BlogPostProps> = ({ onNavigateBa
         <div className="mb-8">
           <h3 className="text-2xl font-bold text-gray-900 mb-4">Related Articles</h3>
           <div className="grid md:grid-cols-2 gap-6">
-            <div className="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow cursor-pointer" onClick={() => onNavigateToPost?.('seattle-airport-guide')}>
+            <div className="bg-white p-6 rounded-md shadow-md hover:shadow-lg transition-shadow cursor-pointer" onClick={() => onNavigateToPost?.('seattle-airport-guide')}>
               <h4 className="text-xl font-semibold text-gray-800 mb-2">Seattle Airport Transportation Guide</h4>
               <p className="text-gray-600 mb-4">Everything you need to know about getting to and from Seattle-Tacoma International Airport.</p>
               <span className="text-brand-primary hover:text-blue-700 font-semibold">Read More →</span>
             </div>
-            <div className="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow cursor-pointer" onClick={() => onNavigateToPost?.('best-time-to-book')}>
+            <div className="bg-white p-6 rounded-md shadow-md hover:shadow-lg transition-shadow cursor-pointer" onClick={() => onNavigateToPost?.('best-time-to-book')}>
               <h4 className="text-xl font-semibold text-gray-800 mb-2">Best Time to Book Your Ride</h4>
               <p className="text-gray-600 mb-4">Tips for getting the best rates and availability for your transportation needs.</p>
               <span className="text-brand-primary hover:text-blue-700 font-semibold">Read More →</span>

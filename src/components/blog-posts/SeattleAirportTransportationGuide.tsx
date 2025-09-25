@@ -368,12 +368,12 @@ const SeattleAirportTransportationGuide: React.FC<BlogPostProps> = ({ onNavigate
         <div className="mb-8">
           <h3 className="text-2xl font-bold text-gray-900 mb-4">Related Articles</h3>
           <div className="grid md:grid-cols-2 gap-6">
-            <div className="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow cursor-pointer" onClick={() => onNavigateToPost?.('best-time-to-book')}>
+            <div className="bg-white p-6 rounded-md shadow-md hover:shadow-lg transition-shadow cursor-pointer" onClick={() => onNavigateToPost?.('best-time-to-book')}>
               <h4 className="text-xl font-semibold text-gray-800 mb-2">Best Time to Book Your Ride</h4>
               <p className="text-gray-600 mb-4">Tips for getting the best rates and availability for your transportation needs.</p>
               <span className="text-brand-primary hover:text-blue-700 font-semibold">Read More →</span>
             </div>
-            <div className="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow cursor-pointer" onClick={() => onNavigateToPost?.('seattle-events')}>
+            <div className="bg-white p-6 rounded-md shadow-md hover:shadow-lg transition-shadow cursor-pointer" onClick={() => onNavigateToPost?.('seattle-events')}>
               <h4 className="text-xl font-semibold text-gray-800 mb-2">Seattle Area Events & Transportation</h4>
               <p className="text-gray-600 mb-4">How to plan your transportation for major events in the Seattle metropolitan area.</p>
               <span className="text-brand-primary hover:text-blue-700 font-semibold">Read More →</span>
