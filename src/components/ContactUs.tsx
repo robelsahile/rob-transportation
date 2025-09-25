@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import ThankYouPage from './ThankYouPage';
 
 type ContactUsProps = {
   onNavigateHome: () => void;
@@ -12,6 +13,7 @@ const ContactUs: React.FC<ContactUsProps> = ({ onNavigateHome }) => {
     subject: '',
     message: ''
   });
+  const [showThankYou, setShowThankYou] = useState(false);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -29,8 +31,7 @@ const ContactUs: React.FC<ContactUsProps> = ({ onNavigateHome }) => {
       });
       
       if (response.ok) {
-        alert('Thank you for your message! We will get back to you soon.');
-        setFormData({ name: '', email: '', phone: '', subject: '', message: '' });
+        setShowThankYou(true);
       } else {
         alert('There was an error sending your message. Please try again or call us directly.');
       }
@@ -38,6 +39,11 @@ const ContactUs: React.FC<ContactUsProps> = ({ onNavigateHome }) => {
       alert('There was an error sending your message. Please try again or call us directly.');
     }
   };
+
+  // Show thank you page if form was submitted successfully
+  if (showThankYou) {
+    return <ThankYouPage onNavigateHome={onNavigateHome} customerName={formData.name} />;
+  }
 
   return (
     <div className="min-h-screen bg-brand-bg">
