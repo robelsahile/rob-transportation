@@ -75,6 +75,8 @@ export default function App() {
     () => localStorage.getItem("rob_admin_authed") === "1"
   );
 
+  const [resetBlog, setResetBlog] = useState<boolean>(false);
+
   const vehicleOptions: VehicleOption[] = useMemo(() => VEHICLE_OPTIONS, []);
   const scrollToTop = useScrollToTop();
 
@@ -185,7 +187,12 @@ export default function App() {
 
   const handleNavigateToAdmin = useCallback(() => setView("admin"), []);
   const handleNavigateToCustomer = useCallback(() => setView("form"), []);
-  const handleNavigateToBlog = useCallback(() => setView("blog"), []);
+  const handleNavigateToBlog = useCallback(() => {
+    setView("blog");
+    setResetBlog(true);
+    // Reset the flag after a short delay to allow the Blog component to react
+    setTimeout(() => setResetBlog(false), 100);
+  }, []);
   const handleNavigateToAbout = useCallback(() => setView("about"), []);
   const handleNavigateToContact = useCallback(() => setView("contact"), []);
   const handleNavigateToCities = useCallback(() => setView("cities"), []);
@@ -531,7 +538,7 @@ export default function App() {
         )}
 
         {view === "blog" && (
-          <Blog onNavigateHome={() => setView("form")} />
+          <Blog onNavigateHome={() => setView("form")} resetToMainPage={resetBlog} />
         )}
 
         {view === "about" && (
