@@ -21,14 +21,11 @@ const ContactUs: React.FC<ContactUsProps> = ({ onNavigateHome }) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    const form = e.target as HTMLFormElement;
-    const formData = new FormData(form);
-    
     try {
-      const response = await fetch('/', {
+      const response = await fetch('/api/send-email', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams(formData as any).toString(),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData),
       });
       
       if (response.ok) {
@@ -106,8 +103,7 @@ const ContactUs: React.FC<ContactUsProps> = ({ onNavigateHome }) => {
           <div>
             <h2 className="text-2xl font-semibold text-gray-800 mb-6">Send us a Message</h2>
             
-            <form onSubmit={handleSubmit} className="space-y-6" name="contact" method="POST" data-netlify="true">
-              <input type="hidden" name="form-name" value="contact" />
+            <form onSubmit={handleSubmit} className="space-y-6">
               <div>
                 <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
                   Full Name *
