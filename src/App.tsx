@@ -124,6 +124,8 @@ function useUrlRouting() {
         window.dispatchEvent(new CustomEvent('navigate-to-payment'));
       } else if (path === "/booking-success") {
         window.dispatchEvent(new CustomEvent('navigate-to-success'));
+      } else if (path === "/payment-success") {
+        window.dispatchEvent(new CustomEvent('navigate-to-success'));
       } else {
         window.dispatchEvent(new CustomEvent('navigate-to-home'));
       }
@@ -456,16 +458,18 @@ export default function App() {
       const orderId = url.searchParams.get("orderId") || "";
       const transactionId = url.searchParams.get("transactionId") || "";
       const paymentId = url.searchParams.get("paymentId") || "";
+      const bookingId = url.searchParams.get("bookingId") || "";
       const hasCtx = !!localStorage.getItem("rt_last_payment");
       
       console.log("Payment success redirect params:", {
         orderId,
         transactionId,
         paymentId,
+        bookingId,
         allParams: Object.fromEntries(url.searchParams.entries())
       });
 
-      if (!orderId && !transactionId && !paymentId && !hasCtx) {
+      if (!orderId && !transactionId && !paymentId && !bookingId && !hasCtx) {
         console.log("No payment parameters found, redirecting to form");
         history.replaceState({}, "", "/");
         setView("form");
@@ -480,7 +484,7 @@ export default function App() {
             orderId: orderId || undefined,
             transactionId: transactionId || undefined,
             paymentId: paymentId || undefined,
-            bookingId: localStorage.getItem("rt_pending_last") || undefined,
+            bookingId: bookingId || localStorage.getItem("rt_pending_last") || undefined,
           }),
         });
         const j = resp.ok ? await resp.json() : null;
@@ -489,7 +493,7 @@ export default function App() {
           localStorage.setItem(
             "rt_last_payment",
             JSON.stringify({
-              bookingId: localStorage.getItem("rt_pending_last") || null,
+              bookingId: bookingId || localStorage.getItem("rt_pending_last") || null,
               orderId,
               transactionId,
               paymentId: j?.paymentId || j?.transactionId || "",
@@ -499,7 +503,7 @@ export default function App() {
         } catch {}
 
         try {
-          const pendingId = localStorage.getItem("rt_pending_last") || "";
+          const pendingId = bookingId || localStorage.getItem("rt_pending_last") || "";
           const pending = JSON.parse(localStorage.getItem(`rt_pending_${pendingId}`) || "null");
           if (pending?.details) {
             setBookingDetails(pending.details);
