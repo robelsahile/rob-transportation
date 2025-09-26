@@ -6,48 +6,65 @@ import SeattleAreaEventsTransportation from './blog-posts/SeattleAreaEventsTrans
 type BlogProps = {
   onNavigateHome: () => void;
   resetToMainPage?: boolean;
+  selectedPost?: string | null;
+  onPostSelect?: (postId: string | null) => void;
 };
 
-const Blog: React.FC<BlogProps> = ({ onNavigateHome, resetToMainPage }) => {
-  const [selectedPost, setSelectedPost] = useState<string | null>(null);
+const Blog: React.FC<BlogProps> = ({ onNavigateHome, resetToMainPage, selectedPost, onPostSelect }) => {
+  const [internalSelectedPost, setInternalSelectedPost] = useState<string | null>(null);
+  
+  // Use external selectedPost if provided, otherwise use internal state
+  const currentSelectedPost = selectedPost !== undefined ? selectedPost : internalSelectedPost;
 
   const handlePostClick = (postId: string) => {
-    setSelectedPost(postId);
+    if (onPostSelect) {
+      onPostSelect(postId);
+    } else {
+      setInternalSelectedPost(postId);
+    }
     // Scroll to top when navigating to a new blog post
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleBackToBlog = () => {
-    setSelectedPost(null);
+    if (onPostSelect) {
+      onPostSelect(null);
+    } else {
+      setInternalSelectedPost(null);
+    }
     // Scroll to top when going back to blog list
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   // Scroll to top whenever a blog post is selected
   useEffect(() => {
-    if (selectedPost) {
+    if (currentSelectedPost) {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
-  }, [selectedPost]);
+  }, [currentSelectedPost]);
 
   // Reset to main blog page when resetToMainPage prop changes
   useEffect(() => {
     if (resetToMainPage) {
-      setSelectedPost(null);
+      if (onPostSelect) {
+        onPostSelect(null);
+      } else {
+        setInternalSelectedPost(null);
+      }
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
-  }, [resetToMainPage]);
+  }, [resetToMainPage, onPostSelect]);
 
   // If a specific blog post is selected, render that post
-  if (selectedPost === 'seattle-airport-guide') {
+  if (currentSelectedPost === 'seattle-airport-guide') {
     return <SeattleAirportTransportationGuide onNavigateBack={handleBackToBlog} onNavigateHome={onNavigateHome} onNavigateToPost={handlePostClick} />;
   }
   
-  if (selectedPost === 'best-time-to-book') {
+  if (currentSelectedPost === 'best-time-to-book') {
     return <BestTimeToBookYourRide onNavigateBack={handleBackToBlog} onNavigateHome={onNavigateHome} onNavigateToPost={handlePostClick} />;
   }
   
-  if (selectedPost === 'seattle-events') {
+  if (currentSelectedPost === 'seattle-events') {
     return <SeattleAreaEventsTransportation onNavigateBack={handleBackToBlog} onNavigateHome={onNavigateHome} onNavigateToPost={handlePostClick} />;
   }
 

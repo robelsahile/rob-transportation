@@ -35,6 +35,114 @@ function useScrollToTop() {
   return scrollToTop;
 }
 
+// Custom hook to handle URL routing and title updates
+function useUrlRouting() {
+  const updateUrlAndTitle = useCallback((view: View, blogPost?: string) => {
+    const baseTitle = "ROB Transportation";
+    let url = "/";
+    let title = baseTitle;
+
+    switch (view) {
+      case "about":
+        url = "/about-us";
+        title = "About Us - " + baseTitle;
+        break;
+      case "blog":
+        url = "/blog";
+        title = "Blog - " + baseTitle;
+        break;
+      case "contact":
+        url = "/contact";
+        title = "Contact Us - " + baseTitle;
+        break;
+      case "cities":
+        url = "/cities";
+        title = "Top Cities - " + baseTitle;
+        break;
+      case "admin":
+        url = "/admin";
+        title = "Admin Dashboard - " + baseTitle;
+        break;
+      case "review":
+        url = "/review-booking";
+        title = "Review Booking - " + baseTitle;
+        break;
+      case "payment":
+        url = "/payment";
+        title = "Payment - " + baseTitle;
+        break;
+      case "success":
+        url = "/booking-success";
+        title = "Booking Success - " + baseTitle;
+        break;
+      case "form":
+      default:
+        url = "/";
+        title = baseTitle;
+        break;
+    }
+
+    // Handle blog post titles
+    if (blogPost) {
+      const postTitles: { [key: string]: string } = {
+        'seattle-airport-guide': 'Seattle Airport Transportation Guide',
+        'best-time-to-book': 'Best Time to Book Your Ride',
+        'seattle-events': 'Seattle Area Events & Transportation'
+      };
+      title = (postTitles[blogPost] || 'Blog Post') + " - " + baseTitle;
+      url = `/blog/${blogPost}`;
+    }
+
+    // Update URL without page reload
+    window.history.pushState({}, '', url);
+    
+    // Update document title
+    document.title = title;
+  }, []);
+
+  // Handle browser back/forward buttons
+  useEffect(() => {
+    const handlePopState = () => {
+      const path = window.location.pathname;
+      
+      if (path === "/about-us") {
+        window.dispatchEvent(new CustomEvent('navigate-to-about'));
+      } else if (path === "/blog") {
+        window.dispatchEvent(new CustomEvent('navigate-to-blog'));
+      } else if (path.startsWith("/blog/")) {
+        const slug = path.split("/blog/")[1];
+        window.dispatchEvent(new CustomEvent('navigate-to-blog-post', { detail: { slug } }));
+      } else if (path === "/contact") {
+        window.dispatchEvent(new CustomEvent('navigate-to-contact'));
+      } else if (path === "/cities") {
+        window.dispatchEvent(new CustomEvent('navigate-to-cities'));
+      } else if (path === "/admin") {
+        window.dispatchEvent(new CustomEvent('navigate-to-admin'));
+      } else if (path === "/review-booking") {
+        window.dispatchEvent(new CustomEvent('navigate-to-review'));
+      } else if (path === "/payment") {
+        window.dispatchEvent(new CustomEvent('navigate-to-payment'));
+      } else if (path === "/booking-success") {
+        window.dispatchEvent(new CustomEvent('navigate-to-success'));
+      } else {
+        window.dispatchEvent(new CustomEvent('navigate-to-home'));
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  // Helper function to add new pages easily
+  const addNewPage = useCallback((viewName: string, urlPath: string, pageTitle: string) => {
+    // This function can be used to dynamically add new pages
+    // For now, it's documented for future use
+    console.log(`To add new page: ${viewName} -> ${urlPath} -> ${pageTitle}`);
+  }, []);
+
+  return { updateUrlAndTitle, addNewPage };
+}
+
 type View = "form" | "review" | "payment" | "success" | "admin" | "blog" | "about" | "contact" | "cities";
 
 const initialBooking: BookingFormData = {
@@ -76,9 +184,11 @@ export default function App() {
   );
 
   const [resetBlog, setResetBlog] = useState<boolean>(false);
+  const [selectedBlogPost, setSelectedBlogPost] = useState<string | null>(null);
 
   const vehicleOptions: VehicleOption[] = useMemo(() => VEHICLE_OPTIONS, []);
   const scrollToTop = useScrollToTop();
+  const { updateUrlAndTitle } = useUrlRouting();
 
   // Scroll to top whenever the view changes
   useEffect(() => {
@@ -89,6 +199,63 @@ export default function App() {
   useEffect(() => {
     scrollToTop();
   }, [scrollToTop]);
+
+  // Handle URL-based navigation events
+  useEffect(() => {
+    const handleNavigateToAbout = () => setView("about");
+    const handleNavigateToBlog = () => {
+      setView("blog");
+      setSelectedBlogPost(null);
+      setResetBlog(true);
+      setTimeout(() => setResetBlog(false), 100);
+    };
+    const handleNavigateToBlogPost = (event: CustomEvent) => {
+      const slug = event.detail.slug;
+      setView("blog");
+      setSelectedBlogPost(slug);
+      setResetBlog(false);
+    };
+    const handleNavigateToContact = () => setView("contact");
+    const handleNavigateToCities = () => setView("cities");
+    const handleNavigateToAdmin = () => setView("admin");
+    const handleNavigateToReview = () => setView("review");
+    const handleNavigateToPayment = () => setView("payment");
+    const handleNavigateToSuccess = () => setView("success");
+    const handleNavigateToHome = () => setView("form");
+
+    window.addEventListener('navigate-to-about', handleNavigateToAbout);
+    window.addEventListener('navigate-to-blog', handleNavigateToBlog);
+    window.addEventListener('navigate-to-blog-post', handleNavigateToBlogPost as EventListener);
+    window.addEventListener('navigate-to-contact', handleNavigateToContact);
+    window.addEventListener('navigate-to-cities', handleNavigateToCities);
+    window.addEventListener('navigate-to-admin', handleNavigateToAdmin);
+    window.addEventListener('navigate-to-review', handleNavigateToReview);
+    window.addEventListener('navigate-to-payment', handleNavigateToPayment);
+    window.addEventListener('navigate-to-success', handleNavigateToSuccess);
+    window.addEventListener('navigate-to-home', handleNavigateToHome);
+
+    return () => {
+      window.removeEventListener('navigate-to-about', handleNavigateToAbout);
+      window.removeEventListener('navigate-to-blog', handleNavigateToBlog);
+      window.removeEventListener('navigate-to-blog-post', handleNavigateToBlogPost as EventListener);
+      window.removeEventListener('navigate-to-contact', handleNavigateToContact);
+      window.removeEventListener('navigate-to-cities', handleNavigateToCities);
+      window.removeEventListener('navigate-to-admin', handleNavigateToAdmin);
+      window.removeEventListener('navigate-to-review', handleNavigateToReview);
+      window.removeEventListener('navigate-to-payment', handleNavigateToPayment);
+      window.removeEventListener('navigate-to-success', handleNavigateToSuccess);
+      window.removeEventListener('navigate-to-home', handleNavigateToHome);
+    };
+  }, []);
+
+  // Update URL and title when view changes
+  useEffect(() => {
+    if (selectedBlogPost) {
+      updateUrlAndTitle("blog", selectedBlogPost);
+    } else {
+      updateUrlAndTitle(view);
+    }
+  }, [view, selectedBlogPost, updateUrlAndTitle]);
 
   const handleInputChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -538,7 +705,12 @@ export default function App() {
         )}
 
         {view === "blog" && (
-          <Blog onNavigateHome={() => setView("form")} resetToMainPage={resetBlog} />
+          <Blog 
+            onNavigateHome={() => setView("form")} 
+            resetToMainPage={resetBlog}
+            selectedPost={selectedBlogPost}
+            onPostSelect={setSelectedBlogPost}
+          />
         )}
 
         {view === "about" && (
