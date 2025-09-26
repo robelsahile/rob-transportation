@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Test Payment Success</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+      }
+      .button {
+        background: #000;
+        color: white;
+        padding: 10px 20px;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        margin: 10px 0;
+      }
+      .button:hover {
+        background: #333;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Test Payment Success Page</h1>
+    <p>
+      This will simulate a payment success and redirect you to the confirmation
+      page.
+    </p>
+
+    <button class="button" onclick="simulatePaymentSuccess()">
+      Simulate Payment Success
+    </button>
+
+    <button class="button" onclick="goToMainApp()">Go to Main App</button>
+
+    <script>
+      function simulatePaymentSuccess() {
+        // Set up test data in localStorage
+        const testBookingId = "TEST-" + Date.now();
+        const testPaymentId = "PAY-" + Date.now();
+
+        // Create test booking data
+        const testBooking = {
+          details: {
+            pickupLocation: "Seattle Airport (SEA)",
+            dropoffLocation: "Downtown Seattle Hotel",
+            dateTime: "2024-01-15T10:00:00",
+            vehicleType: "sedan",
+            name: "John Doe",
+            phone: "+1-555-0123",
+            email: "john.doe@example.com",
+            flightNumber: "AA1234",
+          },
+          pricing: {
+            total: 49.5,
+            currency: "USD",
+            vehicle: "Sedan",
+            distanceMi: 12.5,
+            durationMin: 25,
+          },
+          createdAt: new Date().toISOString(),
+        };
+
+        // Store test data
+        localStorage.setItem(
+          `rt_pending_${testBookingId}`,
+          JSON.stringify(testBooking)
+        );
+        localStorage.setItem("rt_pending_last", testBookingId);
+        localStorage.setItem(
+          "rt_last_payment",
+          JSON.stringify({
+            bookingId: testBookingId,
+            orderId: "ORDER-" + Date.now(),
+            transactionId: "TXN-" + Date.now(),
+            paymentId: testPaymentId,
+          })
+        );
+
+        // Redirect to payment success page
+        window.location.href =
+          "/payment-success?bookingId=" +
+          testBookingId +
+          "&paymentId=" +
+          testPaymentId;
+      }
+
+      function goToMainApp() {
+        window.location.href = "/";
+      }
+    </script>
+  </body>
+</html>
