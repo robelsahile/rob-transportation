@@ -254,7 +254,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const emailHtml = generateEmailHTML(data);
 
     const result = await resend.emails.send({
-      from: "ROB Transportation <noreply@rob-transportation.com>",
+      from: "Rob Transportation <noreply@robtransportation.com>",
       to: [data.customerEmail],
       subject: `Booking Confirmation - ${data.bookingId} | ROB Transportation`,
       html: emailHtml,
