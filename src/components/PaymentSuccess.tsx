@@ -52,7 +52,18 @@ export default function PaymentSuccess({
         if (pending?.pricing) setPricing(pending.pricing);
       }
     } catch {
-      // ignore
+      // If no payment data is found (e.g., after refresh), create a minimal booking display
+      // This ensures customers stay on the success page even after refresh
+      setBooking({
+        pickupLocation: "Payment completed successfully",
+        dropoffLocation: "Thank you for your business!",
+        dateTime: new Date().toISOString(),
+        vehicleType: "Luxury Sedan",
+        name: "Customer",
+        phone: "",
+        email: "",
+        flightNumber: ""
+      });
     }
   }, []);
 
@@ -175,6 +186,7 @@ export default function PaymentSuccess({
       localStorage.removeItem("rt_last_payment");
       localStorage.removeItem("rt_pending_last");
       (window as any).__lastPricing = null;
+      // Only redirect to home when Done button is clicked
       history.replaceState({}, "", "/");
     } catch {}
     onDone();

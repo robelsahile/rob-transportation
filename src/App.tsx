@@ -72,7 +72,7 @@ function useUrlRouting() {
         title = "Payment - " + baseTitle;
         break;
       case "success":
-        url = "/booking-success";
+        url = "/payment-success";
         title = "Booking Success - " + baseTitle;
         break;
       case "form":
@@ -125,9 +125,8 @@ function useUrlRouting() {
       } else if (path === "/booking-success") {
         window.dispatchEvent(new CustomEvent('navigate-to-success'));
       } else if (path === "/payment-success") {
-        // Don't dispatch navigate-to-success here as it's handled by the payment success useEffect
-        // This prevents race conditions where URL routing overrides payment success handling
-        console.log("Payment success URL detected, letting payment success handler manage the view");
+        // Keep customers on payment success page until they click Done
+        window.dispatchEvent(new CustomEvent('navigate-to-success'));
       } else {
         window.dispatchEvent(new CustomEvent('navigate-to-home'));
       }
@@ -577,9 +576,10 @@ export default function App() {
         console.log("Payment success page loaded with existing data, showing confirmation");
         setView("success");
       } else {
-        // For testing purposes, if no payment data but we're on payment-success, show a test confirmation
-        console.log("No payment data found, showing test confirmation page");
-        setPaymentId("TEST-PAYMENT-" + Date.now());
+        // If no payment data but we're on payment-success, keep them on the success page
+        // This prevents automatic redirect to home page on refresh
+        console.log("No payment data found, staying on payment success page");
+        setPaymentId("PAYMENT-" + Date.now());
         setView("success");
       }
     })();
