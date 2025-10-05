@@ -636,7 +636,7 @@ export default function App() {
   }, []);
 
   // Admin list loader
-  useEffect(() => {
+  const loadAdminBookings = useCallback(async () => {
     const ADMIN_TOKEN = ((): string | undefined => {
       try {
         return localStorage.getItem("rob_admin_token") || (import.meta.env.VITE_ADMIN_API_TOKEN as string | undefined);
@@ -644,39 +644,47 @@ export default function App() {
         return import.meta.env.VITE_ADMIN_API_TOKEN as string | undefined;
       }
     })();
-    console.log("Admin loader effect triggered:", { view, isAuthed, hasToken: !!ADMIN_TOKEN });
+    
+    console.log("Loading admin bookings...");
+    setIsLoadingBookings(true);
+    try {
+      const res = await fetch("/api/bookings", {
+        headers: { Authorization: `Bearer ${ADMIN_TOKEN ?? ""}` },
+      });
+      console.log("Admin API response:", { status: res.status, ok: res.ok });
+      
+      if (!res.ok) {
+        const errorText = await res.text();
+        console.error("Admin API error response:", errorText);
+        throw new Error(`Failed to load bookings (${res.status}): ${errorText}`);
+      }
+      
+      const json = await res.json();
+      console.log("Admin API success:", { bookingsCount: json.bookings?.length || 0, bookings: json.bookings });
+      setBookings(json.bookings || []);
+    } catch (err) {
+      console.error("Failed to load bookings:", err);
+      setBookings([]); // Ensure we show empty state on error
+    } finally {
+      setIsLoadingBookings(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    console.log("Admin loader effect triggered:", { view, isAuthed });
     
     if (view !== "admin" || !isAuthed) {
       console.log("Skipping admin data load:", { view, isAuthed });
       return;
     }
     
-    (async () => {
-      console.log("Loading admin bookings...");
-      setIsLoadingBookings(true);
-      try {
-        const res = await fetch("/api/bookings", {
-          headers: { Authorization: `Bearer ${ADMIN_TOKEN ?? ""}` },
-        });
-        console.log("Admin API response:", { status: res.status, ok: res.ok });
-        
-        if (!res.ok) {
-          const errorText = await res.text();
-          console.error("Admin API error response:", errorText);
-          throw new Error(`Failed to load bookings (${res.status}): ${errorText}`);
-        }
-        
-        const json = await res.json();
-        console.log("Admin API success:", { bookingsCount: json.bookings?.length || 0, bookings: json.bookings });
-        setBookings(json.bookings || []);
-      } catch (err) {
-        console.error("Failed to load bookings:", err);
-        setBookings([]); // Ensure we show empty state on error
-      } finally {
-        setIsLoadingBookings(false);
-      }
-    })();
-  }, [view, isAuthed]);
+    // Add a small delay to ensure the admin view is fully rendered
+    const timer = setTimeout(() => {
+      loadAdminBookings();
+    }, 100);
+    
+    return () => clearTimeout(timer);
+  }, [view, isAuthed, loadAdminBookings]);
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -774,6 +782,7 @@ export default function App() {
                 <AdminDashboard
                   bookings={bookings}
                   onNavigateToCustomer={handleNavigateToCustomer}
+                  onRefresh={loadAdminBookings}
                   isLoading={isLoadingBookings}
                 />
               </div>

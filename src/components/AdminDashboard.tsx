@@ -6,6 +6,7 @@ import { DEFAULT_PRICING_CONFIG } from "../lib/pricing";
 type AdminDashboardProps = {
   bookings: BookingData[];
   onNavigateToCustomer: () => void;
+  onRefresh: () => void;
   isLoading: boolean;
 };
 
@@ -36,6 +37,7 @@ function round2(n: number) {
 export default function AdminDashboard({
   bookings,
   onNavigateToCustomer,
+  onRefresh,
   isLoading,
 }: AdminDashboardProps) {
   const taxPctLabel = `${Math.round(DEFAULT_PRICING_CONFIG.taxRate * 100)}%`;
@@ -49,9 +51,18 @@ export default function AdminDashboard({
       {/* Header */}
       <div className="flex justify-between items-center mb-4 border-b pb-3 border-slate-200">
         <h2 className="text-xl font-semibold text-brand-text">Admin Dashboard</h2>
-        <Button onClick={onNavigateToCustomer} variant="secondary">
-          New Booking
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            onClick={onRefresh} 
+            variant="secondary"
+            disabled={isLoading}
+          >
+            {isLoading ? "Refreshing..." : "Refresh"}
+          </Button>
+          <Button onClick={onNavigateToCustomer} variant="secondary">
+            New Booking
+          </Button>
+        </div>
       </div>
 
       {/* States */}
