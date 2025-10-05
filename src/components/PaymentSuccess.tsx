@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import type { BookingFormData } from "../types";
+import { VehicleType } from "../types";
 
 type PricingSnapshot = {
   vehicle?: string;
@@ -58,7 +59,7 @@ export default function PaymentSuccess({
         pickupLocation: "Payment completed successfully",
         dropoffLocation: "Thank you for your business!",
         dateTime: new Date().toISOString(),
-        vehicleType: "Luxury Sedan",
+        vehicleType: VehicleType.SEDAN,
         name: "Customer",
         phone: "",
         email: "",
