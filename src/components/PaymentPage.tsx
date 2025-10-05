@@ -31,7 +31,7 @@ const PaymentPage: React.FC<PaymentPageProps> = (props) => {
     try {
       const redirectUrl = `${window.location.origin}/payment-success?bookingId=${encodeURIComponent(
         bookingId || ""
-      )}`;
+      )}&source=square`;
 
       // Send everything the API needs to build the hosted checkout page
       const body = {

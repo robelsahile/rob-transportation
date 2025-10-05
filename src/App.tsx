@@ -471,6 +471,24 @@ export default function App() {
         allParams: Object.fromEntries(url.searchParams.entries())
       });
 
+      // If we have bookingId from URL but no other payment params, try to find the booking data
+      if (bookingId && !orderId && !transactionId && !paymentId && !hasCtx) {
+        console.log("Found bookingId in URL, looking for booking data:", bookingId);
+        try {
+          const pendingData = JSON.parse(localStorage.getItem(`rt_pending_${bookingId}`) || "null");
+          if (pendingData?.details) {
+            console.log("Found pending booking data, setting up payment success");
+            setBookingDetails(pendingData.details);
+            (window as any).__lastPricing = pendingData.pricing || null;
+            setPaymentId("PAYMENT-SUCCESS-" + Date.now());
+            setView("success");
+            return;
+          }
+        } catch (e) {
+          console.error("Error parsing pending booking data:", e);
+        }
+      }
+
       if (!orderId && !transactionId && !paymentId && !bookingId && !hasCtx) {
         console.log("No payment parameters found, redirecting to form");
         history.replaceState({}, "", "/");
@@ -511,6 +529,38 @@ export default function App() {
           if (pending?.details) {
             setBookingDetails(pending.details);
             (window as any).__lastPricing = pending.pricing || null;
+            
+            // Save to admin dashboard first
+            console.log("Saving booking to admin dashboard (redirect flow):", pendingId);
+            try {
+              const adminPayload = {
+                bookingId: pendingId,
+                pickupLocation: pending.details.pickupLocation,
+                dropoffLocation: pending.details.dropoffLocation,
+                dateTime: pending.details.dateTime,
+                vehicleType: pending.details.vehicleType,
+                name: pending.details.name,
+                phone: pending.details.phone,
+                email: pending.details.email,
+                flightNumber: pending.details.flightNumber?.trim() || null,
+                pricing: pending.pricing || null,
+              };
+
+              const adminResponse = await fetch("/api/bookings", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(adminPayload),
+              });
+
+              if (adminResponse.ok) {
+                console.log("Booking saved to admin dashboard successfully (redirect flow)");
+              } else {
+                const errorText = await adminResponse.text();
+                console.error("Failed to save booking to admin dashboard (redirect flow):", errorText);
+              }
+            } catch (adminError) {
+              console.error("Error saving booking to admin dashboard (redirect flow):", adminError);
+            }
             
             // Send confirmation email for redirect flow
             try {
