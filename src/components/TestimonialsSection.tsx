@@ -1,4 +1,5 @@
-import React from "react";
+import React, { useState } from "react";
+import ReviewForm from "./ReviewForm";
 
 interface Testimonial {
   id: number;
@@ -68,6 +69,24 @@ const testimonials: Testimonial[] = [
 ];
 
 const TestimonialsSection: React.FC = () => {
+  const [reviews, setReviews] = useState<Testimonial[]>(testimonials);
+  const [showReviewForm, setShowReviewForm] = useState(false);
+
+  const handleReviewSubmit = (reviewData: { name: string; location: string; rating: number; comment: string }) => {
+    const newReview: Testimonial = {
+      id: reviews.length + 1,
+      name: reviewData.name,
+      location: reviewData.location,
+      rating: reviewData.rating,
+      comment: reviewData.comment,
+      service: "Customer Review",
+      date: "Just now"
+    };
+    
+    setReviews(prev => [newReview, ...prev]);
+    setShowReviewForm(false);
+  };
+
   const renderStars = (rating: number) => {
     return Array.from({ length: 5 }, (_, index) => (
       <svg
@@ -107,7 +126,7 @@ const TestimonialsSection: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {/* Show all testimonials on desktop */}
           <div className="hidden md:contents">
-            {testimonials.map((testimonial) => (
+            {reviews.map((testimonial) => (
               <div
                 key={testimonial.id}
                 className="bg-white rounded-lg shadow-lg p-6 hover:shadow-xl transition-shadow duration-300"
@@ -146,7 +165,7 @@ const TestimonialsSection: React.FC = () => {
 
           {/* Show only top 3 testimonials on mobile */}
           <div className="md:hidden space-y-6">
-            {testimonials.slice(0, 3).map((testimonial) => (
+            {reviews.slice(0, 3).map((testimonial) => (
               <div
                 key={testimonial.id}
                 className="bg-white rounded-lg shadow-lg p-6 hover:shadow-xl transition-shadow duration-300"
@@ -195,7 +214,7 @@ const TestimonialsSection: React.FC = () => {
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <div className="text-center">
-                <div className="text-2xl font-bold text-brand-primary">247+</div>
+                <div className="text-2xl font-bold text-brand-primary">{reviews.length}+</div>
                 <div className="text-sm text-brand-text-light">Happy Customers</div>
               </div>
               <div className="text-center">
@@ -208,6 +227,22 @@ const TestimonialsSection: React.FC = () => {
               </div>
             </div>
           </div>
+        </div>
+
+        {/* Review Form Section */}
+        <div className="mt-16">
+          {!showReviewForm ? (
+            <div className="text-center">
+              <button
+                onClick={() => setShowReviewForm(true)}
+                className="bg-brand-primary hover:bg-blue-700 text-white font-semibold py-3 px-8 rounded-lg transition-colors duration-200 focus:ring-2 focus:ring-brand-primary focus:ring-offset-2"
+              >
+                Leave a Review
+              </button>
+            </div>
+          ) : (
+            <ReviewForm onSubmit={handleReviewSubmit} />
+          )}
         </div>
       </div>
     </section>

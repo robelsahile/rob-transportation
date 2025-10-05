@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import ThankYouPage from './ThankYouPage';
 
 type ContactUsProps = {
   onNavigateHome: () => void;
@@ -12,18 +13,37 @@ const ContactUs: React.FC<ContactUsProps> = ({ onNavigateHome }) => {
     subject: '',
     message: ''
   });
+  const [showThankYou, setShowThankYou] = useState(false);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Handle form submission here
-    alert('Thank you for your message! We will get back to you soon.');
-    setFormData({ name: '', email: '', phone: '', subject: '', message: '' });
+    
+    try {
+      const response = await fetch('/api/send-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData),
+      });
+      
+      if (response.ok) {
+        setShowThankYou(true);
+      } else {
+        alert('There was an error sending your message. Please try again or call us directly.');
+      }
+    } catch (error) {
+      alert('There was an error sending your message. Please try again or call us directly.');
+    }
   };
+
+  // Show thank you page if form was submitted successfully
+  if (showThankYou) {
+    return <ThankYouPage onNavigateHome={onNavigateHome} customerName={formData.name} />;
+  }
 
   return (
     <div className="min-h-screen bg-brand-bg">
@@ -45,7 +65,7 @@ const ContactUs: React.FC<ContactUsProps> = ({ onNavigateHome }) => {
                 </div>
                 <div>
                   <h3 className="font-semibold text-gray-800">Phone</h3>
-                  <p className="text-gray-600">(206) 555-0123</p>
+                  <p className="text-gray-700">(206) 699-9066</p>
                   <p className="text-gray-600">Available 24/7</p>
                 </div>
               </div>
@@ -56,7 +76,7 @@ const ContactUs: React.FC<ContactUsProps> = ({ onNavigateHome }) => {
                 </div>
                 <div>
                   <h3 className="font-semibold text-gray-800">Email</h3>
-                  <p className="text-gray-600">info@robtransportation.com</p>
+                  <p className="text-gray-700">info@robtransportation.com</p>
                   <p className="text-gray-600">We respond within 2 hours</p>
                 </div>
               </div>
@@ -67,8 +87,8 @@ const ContactUs: React.FC<ContactUsProps> = ({ onNavigateHome }) => {
                 </div>
                 <div>
                   <h3 className="font-semibold text-gray-800">Service Area</h3>
-                  <p className="text-gray-600">Seattle Metropolitan Area</p>
-                  <p className="text-gray-600">Including Bellevue, Redmond, Kirkland, and surrounding areas</p>
+                  <p className="text-gray-700">Seattle Metropolitan Area</p>
+                  <p className="text-gray-600">Including Tacoma, Bellevue, Redmond, Everett, and surrounding areas</p>
                 </div>
               </div>
 
@@ -78,8 +98,8 @@ const ContactUs: React.FC<ContactUsProps> = ({ onNavigateHome }) => {
                 </div>
                 <div>
                   <h3 className="font-semibold text-gray-800">Business Hours</h3>
-                  <p className="text-gray-600">24/7 Service Available</p>
-                  <p className="text-gray-600">Office: Monday - Friday, 9 AM - 6 PM</p>
+                  <p className="text-gray-700">24/7 Service Available</p>
+                  <p className="text-gray-600">Office: Monday - Friday, 8 AM - 6 PM</p>
                 </div>
               </div>
             </div>
