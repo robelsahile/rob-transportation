@@ -126,11 +126,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       console.log("Saving booking to Supabase:", { id: row.id, name: row.name });
 
-      // upsert by id (idempotent)
-      const { error } = await supabase.from("bookings").upsert(row, {
-        onConflict: "id",
-        ignoreDuplicates: false,
-      });
+      // Only allow creation when explicitly flagged as confirmed
+      const confirmed: boolean = Boolean((req.body as any)?.confirmed === true);
+      if (!confirmed) {
+        return send(res, 202, { ok: true, queued: true });
+      }
+
+      // Insert confirmed booking
+      const { error } = await supabase.from("bookings").insert(row);
 
       if (error) {
         console.error("Supabase upsert error:", error);
@@ -172,10 +175,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       res.setHeader("Cache-Control", "no-store"); // avoid 304 during testing
 
-      console.log("Querying Supabase for bookings...");
+      console.log("Querying Supabase for confirmed bookings only...");
       const { data, error } = await supabase
         .from("bookings")
         .select("*")
+        .eq("payment_status", "COMPLETED")
         .order("created_at", { ascending: false })
         .limit(200);
 

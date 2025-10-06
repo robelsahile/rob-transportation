@@ -97,19 +97,38 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       console.log("Booking ID extracted:", { bookingId, note, ref1, ref2, orderId });
 
       if (bookingId) {
-        const { error } = await supabase
-          .from("bookings")
-          .update({
-            payment_id: paymentId || null,
-            payment_status: status || null,
-          })
-          .eq("id", bookingId);
+        if (status === "COMPLETED") {
+          // Insert booking now that payment is confirmed, if it doesn't exist yet
+          // We only need minimal columns here; the app/admin can enrich later if desired
+          // Try to upsert payment fields directly first; if no row updated, insert one
+          const updateRes = await supabase
+            .from("bookings")
+            .update({ payment_id: paymentId || null, payment_status: status || null })
+            .eq("id", bookingId);
 
-        if (error) {
-          console.error("Supabase update error:", error);
+          const updated = Boolean(updateRes && !updateRes.error);
+
+          if (!updated) {
+            // Create a skeletal row with just id and payment fields
+            const insertRes = await supabase.from("bookings").insert({
+              id: bookingId,
+              payment_id: paymentId || null,
+              payment_status: status || null,
+            });
+            if (insertRes.error) {
+              console.error("Supabase insert on webhook error:", insertRes.error);
+            }
+          }
         } else {
-          console.log("Successfully updated booking:", bookingId);
+          // For non-completed statuses, just record status if row exists; don't create
+          const { error } = await supabase
+            .from("bookings")
+            .update({ payment_id: paymentId || null, payment_status: status || null })
+            .eq("id", bookingId);
+          if (error) console.error("Supabase update (non-completed) error:", error);
         }
+
+        console.log("Processed webhook for booking:", bookingId, "status=", status);
       } else {
         console.warn("No booking ID found in webhook data");
       }
