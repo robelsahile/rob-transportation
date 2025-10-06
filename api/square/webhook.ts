@@ -104,9 +104,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           const updateRes = await supabase
             .from("bookings")
             .update({ payment_id: paymentId || null, payment_status: status || null })
-            .eq("id", bookingId);
+            .eq("id", bookingId)
+            .select("id");
 
-          const updated = Boolean(updateRes && !updateRes.error);
+          const updated = Array.isArray(updateRes.data) && updateRes.data.length > 0;
 
           if (!updated) {
             // Create a skeletal row with just id and payment fields
