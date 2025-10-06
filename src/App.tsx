@@ -331,6 +331,32 @@ export default function App() {
       localStorage.setItem("rt_pending_last", newId);
     } catch {}
 
+    // Provisional save BEFORE redirect so the webhook can update even if redirect context is lost
+    try {
+      const provisionalPayload = {
+        bookingId: newId,
+        pickupLocation: bookingDetails.pickupLocation,
+        dropoffLocation: bookingDetails.dropoffLocation,
+        dateTime: bookingDetails.dateTime,
+        vehicleType: bookingDetails.vehicleType ?? VehicleType.SEDAN,
+        name: bookingDetails.name,
+        phone: bookingDetails.phone,
+        email: bookingDetails.email,
+        flightNumber: bookingDetails.flightNumber?.trim() || null,
+        // Persist the current pricing snapshot so Admin shows Price (Upfront)
+        pricing: (window as any)?.__lastPricing || null,
+      };
+      // Await up to ~1s so the row exists before redirect; ignore errors
+      await Promise.race([
+        fetch("/api/bookings", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(provisionalPayload),
+        }),
+        new Promise((resolve) => setTimeout(resolve, 1000)),
+      ]);
+    } catch {}
+
     setView("payment");
   }, [bookingDetails]);
 

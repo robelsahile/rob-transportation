@@ -65,9 +65,36 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       // Fallbacks (sometimes order reference is present in webhook)
       const ref1 = body?.data?.object?.order?.reference_id;
       const ref2 = p?.order?.referenceId;
+      const orderId = p?.order_id || body?.data?.object?.order?.id || body?.data?.object?.payment?.order_id;
       bookingId = bookingId || ref1 || ref2 || null;
 
-      console.log("Booking ID extracted:", { bookingId, note, ref1, ref2 });
+      // If still missing but we have an order_id, fetch the order to read reference_id
+      if (!bookingId && orderId) {
+        try {
+          const token = process.env.SQUARE_ACCESS_TOKEN;
+          const env = process.env.SQUARE_ENV || "production";
+          if (token) {
+            const host = (env === "sandbox")
+              ? "https://connect.squareupsandbox.com"
+              : "https://connect.squareup.com";
+            const r = await fetch(`${host}/v2/orders/${orderId}`, {
+              method: "GET",
+              headers: {
+                Authorization: `Bearer ${token}`,
+                "Content-Type": "application/json",
+                "Square-Version": "2023-10-18",
+              },
+            });
+            const j = await r.json();
+            const ref = j?.order?.reference_id || j?.order?.referenceId || null;
+            if (ref) bookingId = ref;
+          }
+        } catch (e) {
+          console.warn("Failed to fetch order for reference_id", { orderId, err: String(e) });
+        }
+      }
+
+      console.log("Booking ID extracted:", { bookingId, note, ref1, ref2, orderId });
 
       if (bookingId) {
         const { error } = await supabase
