@@ -374,7 +374,7 @@ export default function App() {
   }, []);
 
   const postBookingToApi = useCallback(
-    async (pricing: any) => {
+    async (pricing: any, confirmed: boolean = false) => {
       try {
         const payload = {
           bookingId,
@@ -387,6 +387,7 @@ export default function App() {
           email: bookingDetails.email,
           flightNumber: bookingDetails.flightNumber?.trim() || null,
           pricing,
+          confirmed,
         };
 
         await fetch("/api/bookings", {
@@ -442,7 +443,7 @@ export default function App() {
         console.error("Error sending confirmation email:", error);
       }
 
-      postBookingToApi(pricing ?? null);     // always post
+      postBookingToApi(pricing ?? null, true);     // confirmed save after payment
       if (pricing) handleSaveBooking(pricing);
 
       setView("success");

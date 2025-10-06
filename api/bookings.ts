@@ -132,8 +132,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return send(res, 202, { ok: true, queued: true });
       }
 
-      // Insert confirmed booking
-      const { error } = await supabase.from("bookings").insert(row);
+      // Upsert confirmed booking (webhook may have inserted a minimal row)
+      const { error } = await supabase.from("bookings").upsert(row, {
+        onConflict: "id",
+        ignoreDuplicates: false,
+      });
 
       if (error) {
         console.error("Supabase upsert error:", error);
@@ -175,13 +178,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       res.setHeader("Cache-Control", "no-store"); // avoid 304 during testing
 
-      console.log("Querying Supabase for confirmed bookings only...");
-      const { data, error } = await supabase
+      const confirmedOnly = String((req.query as any)?.confirmedOnly || "").trim() === "1";
+      console.log("Querying Supabase for bookings...", { confirmedOnly });
+      let q = supabase
         .from("bookings")
         .select("*")
-        .eq("payment_status", "COMPLETED")
         .order("created_at", { ascending: false })
         .limit(200);
+
+      if (confirmedOnly) {
+        q = q.eq("payment_status", "COMPLETED");
+      }
+
+      const { data, error } = await q;
 
       if (error) {
         console.error("Supabase error:", error);
