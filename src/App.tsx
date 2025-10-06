@@ -545,6 +545,7 @@ export default function App() {
                 email: pending.details.email,
                 flightNumber: pending.details.flightNumber?.trim() || null,
                 pricing: pending.pricing || null,
+                confirmed: true,
               };
 
               const adminResponse = await fetch("/api/bookings", {
@@ -594,7 +595,7 @@ export default function App() {
               console.error("Error sending confirmation email (redirect flow):", emailError);
             }
             
-            postBookingToApi(pending.pricing ?? null); // post even if null pricing
+            postBookingToApi(pending.pricing ?? null, true); // confirmed save
             if (pending.pricing) handleSaveBooking(pending.pricing);
           }
         } catch {}
