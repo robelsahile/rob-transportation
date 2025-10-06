@@ -345,11 +345,15 @@ export default function App() {
         flightNumber: bookingDetails.flightNumber?.trim() || null,
         pricing: null,
       };
-      fetch("/api/bookings", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(provisionalPayload),
-      }).catch(() => {});
+      // Await up to ~1s so the row exists before redirect; ignore errors
+      await Promise.race([
+        fetch("/api/bookings", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(provisionalPayload),
+        }),
+        new Promise((resolve) => setTimeout(resolve, 1000)),
+      ]);
     } catch {}
 
     setView("payment");
