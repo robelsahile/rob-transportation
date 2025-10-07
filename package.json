@@ -9,6 +9,8 @@
     "install:clean": "npm install --no-audit --no-fund"
   },
   "dependencies": {
+    "@stripe/react-stripe-js": "^5.2.0",
+    "@stripe/stripe-js": "^8.0.0",
     "@supabase/supabase-js": "^2.57.4",
     "@types/react-router-dom": "^5.3.3",
     "@vercel/node": "^3.0.7",
@@ -16,6 +18,7 @@
     "react-dom": "^18.3.1",
     "react-router-dom": "^7.9.2",
     "resend": "^3.5.0",
+    "stripe": "^19.1.0",
     "twilio": "^4.19.0"
   },
   "devDependencies": {

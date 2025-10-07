@@ -69,6 +69,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     try {
       console.log("POST /api/bookings - Booking request received");
       
+      // Be tolerant to body being a string or already-parsed object
+      const rawBody: any = typeof req.body === "string" ? (() => { try { return JSON.parse(req.body); } catch { return {}; } })() : (req.body ?? {});
+
       const {
         bookingId,
         pickupLocation,
@@ -80,7 +83,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         email,
         flightNumber,
         pricing, // JSON (optional)
-      } = (req.body ?? {}) as Record<string, any>;
+      } = rawBody as Record<string, any>;
 
       console.log("Booking data received:", { 
         bookingId, 
@@ -126,8 +129,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       console.log("Saving booking to Supabase:", { id: row.id, name: row.name });
 
-      // Only allow creation when explicitly flagged as confirmed
-      const confirmed: boolean = Boolean((req.body as any)?.confirmed === true);
+      // Only allow creation when explicitly flagged as confirmed (accept true or "true")
+      const confirmed: boolean = rawBody?.confirmed === true || rawBody?.confirmed === "true";
+      console.log("[/api/bookings] POST received", { id: bookingId, confirmed, hasPricing: !!pricing });
       if (!confirmed) {
         return send(res, 202, { ok: true, queued: true });
       }

@@ -451,88 +451,38 @@ export default function App() {
     [bookingDetails, bookingId, handleSaveBooking, postBookingToApi]
   );
 
-  // Handle /payment-success return path from Square
+  // Handle /payment-success return path from Stripe (if redirect occurs)
   useEffect(() => {
     (async () => {
       if (typeof window === "undefined") return;
       if (window.location.pathname !== "/payment-success") return;
 
       const url = new URL(window.location.href);
-      const orderId = url.searchParams.get("orderId") || "";
-      const transactionId = url.searchParams.get("transactionId") || "";
-      const paymentId = url.searchParams.get("paymentId") || "";
-      const bookingId = url.searchParams.get("bookingId") || "";
-      const hasCtx = !!localStorage.getItem("rt_last_payment");
+      const paymentIntentId = url.searchParams.get("payment_intent") || "";
+      const paymentIntentClientSecret = url.searchParams.get("payment_intent_client_secret") || "";
+      const redirectStatus = url.searchParams.get("redirect_status") || "";
       
       console.log("Payment success redirect params:", {
-        orderId,
-        transactionId,
-        paymentId,
-        bookingId,
-        allParams: Object.fromEntries(url.searchParams.entries())
+        paymentIntentId,
+        redirectStatus,
+        hasClientSecret: !!paymentIntentClientSecret,
       });
 
-      // If we have bookingId from URL but no other payment params, try to find the booking data
-      if (bookingId && !orderId && !transactionId && !paymentId && !hasCtx) {
-        console.log("Found bookingId in URL, looking for booking data:", bookingId);
+      // Check if we have a successful redirect from Stripe
+      if (redirectStatus === "succeeded" && paymentIntentId) {
+        console.log("Stripe redirect success detected, processing payment:", paymentIntentId);
+        
         try {
-          const pendingData = JSON.parse(localStorage.getItem(`rt_pending_${bookingId}`) || "null");
-          if (pendingData?.details) {
-            console.log("Found pending booking data, setting up payment success");
-            setBookingDetails(pendingData.details);
-            (window as any).__lastPricing = pendingData.pricing || null;
-            setPaymentId("PAYMENT-SUCCESS-" + Date.now());
-            setView("success");
-            return;
-          }
-        } catch (e) {
-          console.error("Error parsing pending booking data:", e);
-        }
-      }
-
-      if (!orderId && !transactionId && !paymentId && !bookingId && !hasCtx) {
-        console.log("No payment parameters found, redirecting to form");
-        history.replaceState({}, "", "/");
-        setView("form");
-        return;
-      }
-
-      try {
-        const resp = await fetch("/api/confirm-square", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            orderId: orderId || undefined,
-            transactionId: transactionId || undefined,
-            paymentId: paymentId || undefined,
-            bookingId: bookingId || localStorage.getItem("rt_pending_last") || undefined,
-          }),
-        });
-        const j = resp.ok ? await resp.json() : null;
-
-        try {
-          localStorage.setItem(
-            "rt_last_payment",
-            JSON.stringify({
-              bookingId: bookingId || localStorage.getItem("rt_pending_last") || null,
-              orderId,
-              transactionId,
-              paymentId: j?.paymentId || j?.transactionId || "",
-            })
-          );
-          // Keep the URL as /payment-success to maintain the confirmation page
-          history.replaceState({}, "", "/payment-success");
-        } catch {}
-
-        try {
-          const pendingId = bookingId || localStorage.getItem("rt_pending_last") || "";
+          const pendingId = localStorage.getItem("rt_pending_last") || "";
           const pending = JSON.parse(localStorage.getItem(`rt_pending_${pendingId}`) || "null");
+          
           if (pending?.details) {
             setBookingDetails(pending.details);
             (window as any).__lastPricing = pending.pricing || null;
+            setBookingId(pendingId);
             
-            // Save to admin dashboard first
-            console.log("Saving booking to admin dashboard (redirect flow):", pendingId);
+            // Save to admin dashboard
+            console.log("Saving booking to admin dashboard (Stripe redirect):", pendingId);
             try {
               const adminPayload = {
                 bookingId: pendingId,
@@ -555,19 +505,19 @@ export default function App() {
               });
 
               if (adminResponse.ok) {
-                console.log("Booking saved to admin dashboard successfully (redirect flow)");
+                console.log("Booking saved to admin dashboard successfully");
               } else {
                 const errorText = await adminResponse.text();
-                console.error("Failed to save booking to admin dashboard (redirect flow):", errorText);
+                console.error("Failed to save booking to admin dashboard:", errorText);
               }
             } catch (adminError) {
-              console.error("Error saving booking to admin dashboard (redirect flow):", adminError);
+              console.error("Error saving booking to admin dashboard:", adminError);
             }
             
-            // Send confirmation email for redirect flow
+            // Send confirmation email
             try {
-              console.log("Sending confirmation email for redirect booking:", pendingId);
-              const emailResponse = await fetch('/api/send-receipt-email', {
+              console.log("Sending confirmation email for booking:", pendingId);
+              await fetch('/api/send-receipt-email', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -581,34 +531,40 @@ export default function App() {
                   vehicleType: pending.details.vehicleType,
                   flightNumber: pending.details.flightNumber,
                   pricing: pending.pricing,
-                  paymentId: j?.paymentId || j?.transactionId || paymentId || "PAID"
+                  paymentId: paymentIntentId
                 })
               });
-              
-              if (emailResponse.ok) {
-                console.log("Confirmation email sent successfully (redirect flow)");
-              } else {
-                const errorText = await emailResponse.text();
-                console.error("Failed to send confirmation email (redirect flow):", errorText);
-              }
             } catch (emailError) {
-              console.error("Error sending confirmation email (redirect flow):", emailError);
+              console.error("Error sending confirmation email:", emailError);
             }
             
-            postBookingToApi(pending.pricing ?? null, true); // confirmed save
+            postBookingToApi(pending.pricing ?? null, true);
             if (pending.pricing) handleSaveBooking(pending.pricing);
           }
-        } catch {}
+          
+          localStorage.setItem(
+            "rt_last_payment",
+            JSON.stringify({
+              bookingId: pendingId,
+              paymentId: paymentIntentId,
+            })
+          );
+          
+          setPaymentId(paymentIntentId);
+          setView("success");
+          history.replaceState({}, "", "/payment-success");
+        } catch (e) {
+          console.error("Error processing Stripe redirect:", e);
+          history.replaceState({}, "", "/");
+          setView("form");
+        }
+        return;
+      }
 
-        setPaymentId(j?.paymentId || transactionId || orderId || "PAID");
-        // Ensure we show the confirmation page
-        setView("success");
-        console.log("Payment success processed, showing confirmation page", {
-          paymentId: j?.paymentId || transactionId || orderId || "PAID",
-          view: "success"
-        });
-      } catch (e) {
-        console.error("Payment success processing failed:", e);
+      // If no Stripe redirect params, check localStorage for existing payment data
+      const hasCtx = !!localStorage.getItem("rt_last_payment");
+      if (!hasCtx && !paymentIntentId) {
+        console.log("No payment data found, redirecting to form");
         history.replaceState({}, "", "/");
         setView("form");
       }

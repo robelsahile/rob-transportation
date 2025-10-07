@@ -1,4 +1,7 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
+import { loadStripe } from "@stripe/stripe-js";
+import { Elements } from "@stripe/react-stripe-js";
+import StripePaymentForm from "./StripePaymentForm";
 
 type PaymentPageProps = {
   bookingId: string;
@@ -6,75 +9,94 @@ type PaymentPageProps = {
   customerName?: string;
   customerEmail?: string;
   onBack: () => void;
-  onPaid: (paymentId: string) => void; // reserved for future, not used in hosted checkout
+  onPaid: (paymentId: string) => void;
 };
 
-const PaymentPage: React.FC<PaymentPageProps> = (props) => {
-  const { bookingId, totalAmount, customerName, customerEmail, onBack } = props;
+// Initialize Stripe (loaded once)
+const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || "");
 
+const PaymentPage: React.FC<PaymentPageProps> = (props) => {
+  const { bookingId, totalAmount, customerName, customerEmail, onBack, onPaid } = props;
+
+  const [clientSecret, setClientSecret] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(true);
 
   const subtotalCents = Math.round(totalAmount * 100);
   const displaySubtotal = useMemo(() => `$${(subtotalCents / 100).toFixed(2)}`, [subtotalCents]);
 
-  // Pull the chosen vehicle name that ReviewBooking saved on window.__lastPricing
+  // Pull the chosen vehicle name from window.__lastPricing
   const vehicleName =
     typeof (window as any)?.__lastPricing?.vehicle === "string" &&
     (window as any).__lastPricing.vehicle.trim()
       ? (window as any).__lastPricing.vehicle.trim()
       : "Private Ride";
 
-  async function handleHostedCheckout(): Promise<void> {
-    setError(null);
-    setBusy(true);
-    try {
-      const redirectUrl = `${window.location.origin}/payment-success?bookingId=${encodeURIComponent(
-        bookingId || ""
-      )}&source=square`;
+  // Create PaymentIntent on component mount
+  useEffect(() => {
+    (async () => {
+      setError(null);
+      setLoading(true);
 
-      // Send everything the API needs to build the hosted checkout page
-      const body = {
-        amount: subtotalCents,
-        bookingId,
-        customerName,
-        customerEmail,
-        redirectUrl,
-        vehicleName, // <-- this makes the Order summary list show the selected vehicle
-      };
+      try {
+        const body = {
+          amount: subtotalCents,
+          bookingId,
+          customerName,
+          customerEmail,
+          vehicleName,
+        };
 
-      const resp = await fetch("/api/create-payment-link", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
+        const resp = await fetch("/api/create-payment-intent", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
 
-      const text = await resp.text();
-      const data = text ? (() => { try { return JSON.parse(text); } catch { return null; } })() : null;
+        const data = await resp.json();
 
-      if (!resp.ok) {
-        const msg =
-          (data && (data.error || data.message)) ||
-          text ||
-          "Failed to start checkout.";
-        throw new Error(msg);
+        if (!resp.ok) {
+          const msg = data.error || data.message || "Failed to initialize payment.";
+          throw new Error(msg);
+        }
+
+        if (!data.clientSecret) {
+          throw new Error("No client secret returned from payment initialization.");
+        }
+
+        setClientSecret(data.clientSecret);
+      } catch (e: unknown) {
+        const msg = e instanceof Error ? e.message : "Failed to initialize payment.";
+        setError(msg);
+      } finally {
+        setLoading(false);
       }
+    })();
+  }, [subtotalCents, bookingId, customerName, customerEmail, vehicleName]);
 
-      const url = data?.payment_link?.url || data?.url;
-      if (!url) throw new Error("No payment link returned.");
-      window.location.href = url;
-    } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : "Failed to start checkout.";
-      setError(msg);
-      setBusy(false);
-    }
-  }
+  const appearance = {
+    theme: "stripe" as const,
+    variables: {
+      colorPrimary: "#000000",
+      colorBackground: "#ffffff",
+      colorText: "#1f2937",
+      colorDanger: "#ef4444",
+      fontFamily: "system-ui, -apple-system, sans-serif",
+      spacingUnit: "4px",
+      borderRadius: "8px",
+    },
+  };
+
+  const options = {
+    clientSecret,
+    appearance,
+  };
 
   return (
     <div className="max-w-3xl mx-auto p-4 sm:p-6">
       <h1 className="text-2xl font-semibold mb-1">Payment</h1>
       <p className="text-sm text-gray-500">
-        Secure checkout will open on Square. Subtotal:{" "}
+        Complete your payment securely below. Total:{" "}
         <span className="font-semibold">{displaySubtotal}</span>
       </p>
 
@@ -92,28 +114,37 @@ const PaymentPage: React.FC<PaymentPageProps> = (props) => {
         )}
       </div>
 
+      {loading && (
+        <div className="mt-6 flex items-center justify-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-black"></div>
+          <span className="ml-3 text-gray-600">Initializing secure payment...</span>
+        </div>
+      )}
+
       {error && (
         <div className="mt-4 rounded-lg bg-red-50 text-red-700 p-3 text-sm">{error}</div>
       )}
 
-      <div className="mt-6 grid gap-3">
-        <button
-          type="button"
-          onClick={handleHostedCheckout}
-          disabled={busy}
-          className="w-full rounded-2xl py-3 font-medium bg-black text-white disabled:opacity-50"
-        >
-          {busy ? "Opening secure checkout…" : `Pay Securely with Square (${displaySubtotal})`}
-        </button>
+      {!loading && !error && clientSecret && (
+        <div className="mt-6">
+          <Elements stripe={stripePromise} options={options}>
+            <StripePaymentForm 
+              onSuccess={onPaid} 
+              onBack={onBack}
+              displayTotal={displaySubtotal}
+            />
+          </Elements>
+        </div>
+      )}
 
-        <button onClick={onBack} className="px-4 py-2 rounded-xl border mt-4">
+      {!loading && !error && !clientSecret && (
+        <button onClick={onBack} className="mt-6 px-4 py-2 rounded-xl border">
           Back
         </button>
-      </div>
+      )}
 
       <p className="mt-4 text-xs text-gray-400">
-        * You’ll be redirected to Square’s secure checkout. After payment you’ll
-        come back here. Discounts or coupon codes can be entered there.
+        * Your payment information is processed securely by Stripe. We never store your card details.
       </p>
     </div>
   );
