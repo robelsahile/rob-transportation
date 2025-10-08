@@ -191,6 +191,20 @@ export default function ReviewBooking({ data, onEdit, onConfirm }: Props) {
               <dd className="col-span-2 text-brand-text text-right">{data.flightNumber}</dd>
             </div>
           ) : null}
+
+          {data.passengers ? (
+            <div className="grid grid-cols-3 gap-4 p-3 sm:p-4 bg-white">
+              <dt className="col-span-1 text-brand-text-light">Passengers</dt>
+              <dd className="col-span-2 text-brand-text text-right">{data.passengers}</dd>
+            </div>
+          ) : null}
+
+          {data.notes ? (
+            <div className="grid grid-cols-3 gap-4 p-3 sm:p-4 bg-white">
+              <dt className="col-span-1 text-brand-text-light">Additional Notes</dt>
+              <dd className="col-span-2 text-brand-text text-right whitespace-pre-line">{data.notes}</dd>
+            </div>
+          ) : null}
         </dl>
       </div>
 

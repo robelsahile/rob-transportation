@@ -24,6 +24,10 @@ alter table public.bookings add column if not exists payment_status text;
 -- Add vehicle selection ID column (format: yyyyMMdd-xxx-nnnn)
 alter table public.bookings add column if not exists vehicle_selection_id text;
 
+-- Add passengers and notes columns
+alter table public.bookings add column if not exists passengers integer;
+alter table public.bookings add column if not exists notes text;
+
 -- Ensure no duplicate created_at index remains (advisor flagged duplicate)
 drop index if exists public.bookings_created_at_desc_idx;
 create index if not exists bookings_created_at_idx on public.bookings (created_at desc);

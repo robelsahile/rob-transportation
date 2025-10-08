@@ -157,6 +157,8 @@ const initialBooking: BookingFormData = {
   phone: "",
   email: "",
   flightNumber: "",
+  passengers: undefined,
+  notes: "",
 };
 
 /* ------------------- Booking ID generator ------------------- */

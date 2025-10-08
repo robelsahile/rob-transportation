@@ -82,6 +82,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         phone,
         email,
         flightNumber,
+        passengers,
+        notes,
         pricing, // JSON (optional)
       } = rawBody as Record<string, any>;
 
@@ -128,6 +130,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         phone: String(phone),
         email: String(email),
         flight_number: flightNumber ? String(flightNumber) : null,
+        passengers: passengers ? parseInt(passengers, 10) : null,
+        notes: notes ? String(notes) : null,
         pricing: pricing ?? null, // must be JSON-serializable for jsonb
         vehicle_selection_id: vehicleSelectionId,
         created_at: pacificTime.toISOString(), // Explicitly set to Pacific time

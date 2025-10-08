@@ -402,6 +402,41 @@ const BookingForm: React.FC<BookingFormProps> = ({
           Icon={PlaneIcon}
         />
 
+        <TextInput
+          label="Number of Passengers (optional)"
+          name="passengers"
+          type="number"
+          value={bookingDetails.passengers?.toString() || ""}
+          onChange={(e) => {
+            const value = e.target.value;
+            onInputChange({
+              ...e,
+              target: {
+                ...e.target,
+                name: "passengers",
+                value: value ? parseInt(value, 10) : undefined
+              }
+            } as any);
+          }}
+          placeholder="e.g., 2"
+          min="1"
+          max="20"
+        />
+
+        <label className="block mb-4">
+          <span className="block text-sm font-medium text-brand-text-light mb-2">
+            Additional Notes or Instructions (optional)
+          </span>
+          <textarea
+            name="notes"
+            value={bookingDetails.notes || ""}
+            onChange={onInputChange as any}
+            placeholder="e.g., Special requests, luggage details, accessibility needs..."
+            rows={3}
+            className="w-full px-4 py-3 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-brand-accent focus:border-transparent resize-none"
+          />
+        </label>
+
         <div className="mt-8">
           <Button type="submit" fullWidth variant="primary">
             Review Booking

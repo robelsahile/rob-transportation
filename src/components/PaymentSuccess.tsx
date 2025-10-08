@@ -112,6 +112,8 @@ export default function PaymentSuccess({
       phone: booking.phone,
       email: booking.email,
       flightNumber: booking.flightNumber?.trim() || null,
+      passengers: booking.passengers || null,
+      notes: booking.notes?.trim() || null,
       pricing: pricing || null,
     };
 
@@ -152,6 +154,8 @@ export default function PaymentSuccess({
         vehicleType: booking.vehicleType,
         vehicleName: pricing?.vehicle || undefined,
         flightNumber: booking.flightNumber?.trim() || undefined,
+        passengers: booking.passengers || undefined,
+        notes: booking.notes?.trim() || undefined,
         pricing: pricing || null,
         paymentId,
       };
@@ -315,6 +319,20 @@ export default function PaymentSuccess({
                 <div className="grid grid-cols-3 gap-4 p-3 sm:p-4 bg-white">
                   <dt className="col-span-1 text-brand-text-light">Flight</dt>
                   <dd className="col-span-2 text-brand-text text-right">{booking.flightNumber}</dd>
+                </div>
+              ) : null}
+
+              {booking.passengers ? (
+                <div className="grid grid-cols-3 gap-4 p-3 sm:p-4 bg-white">
+                  <dt className="col-span-1 text-brand-text-light">Passengers</dt>
+                  <dd className="col-span-2 text-brand-text text-right">{booking.passengers}</dd>
+                </div>
+              ) : null}
+
+              {booking.notes ? (
+                <div className="grid grid-cols-3 gap-4 p-3 sm:p-4 bg-white">
+                  <dt className="col-span-1 text-brand-text-light">Additional Notes</dt>
+                  <dd className="col-span-2 text-brand-text text-right whitespace-pre-line">{booking.notes}</dd>
                 </div>
               ) : null}
             </dl>

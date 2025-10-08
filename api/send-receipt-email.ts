@@ -15,6 +15,8 @@ interface ReceiptData {
   vehicleType: string;
   vehicleName?: string;
   flightNumber?: string;
+  passengers?: number;
+  notes?: string;
   pricing: {
     total: number;
     currency: string;
@@ -133,10 +135,24 @@ function generateEmailHTML(data: ReceiptData): string {
           <span class="detail-value">${vehicleDisplayName}</span>
         </div>
         
+        ${data.passengers ? `
+        <div class="detail-row">
+          <span class="detail-label">Number of Passengers</span>
+          <span class="detail-value">${data.passengers}</span>
+        </div>
+        ` : ''}
+        
         ${data.flightNumber ? `
         <div class="detail-row">
           <span class="detail-label">Flight Number</span>
           <span class="detail-value">${data.flightNumber}</span>
+        </div>
+        ` : ''}
+        
+        ${data.notes ? `
+        <div class="detail-row">
+          <span class="detail-label">Additional Notes</span>
+          <span class="detail-value" style="white-space: pre-wrap;">${data.notes}</span>
         </div>
         ` : ''}
         
