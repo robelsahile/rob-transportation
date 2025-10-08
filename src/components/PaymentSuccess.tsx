@@ -243,7 +243,25 @@ export default function PaymentSuccess({
           </div>
         )}
 
-        <button className="mt-6 px-4 py-2 rounded-xl bg-black text-white" onClick={handleDone}>
+        {/* Thank You Message */}
+        <div className="mt-8 max-w-2xl mx-auto">
+          <div className="bg-gradient-to-br from-slate-50 to-slate-100 border border-slate-200 rounded-2xl p-6 shadow-sm">
+            <p className="text-base text-brand-text leading-relaxed mb-4">
+              <span className="font-semibold">Thank you for choosing Rob Transportation!</span> Your booking has been successfully confirmed and your payment has been received.
+            </p>
+            <p className="text-sm text-brand-text-light leading-relaxed mb-3">
+              You'll receive a confirmation email shortly with all your booking details.
+            </p>
+            <p className="text-sm text-brand-text-light leading-relaxed mb-3">
+              Our team will be in touch if any additional information is needed.
+            </p>
+            <p className="text-sm text-brand-text font-medium">
+              We look forward to providing you with a smooth and reliable ride experience.
+            </p>
+          </div>
+        </div>
+
+        <button className="mt-6 px-6 py-3 rounded-xl bg-black text-white hover:bg-gray-800 transition-colors font-medium" onClick={handleDone}>
           Done
         </button>
       </div>
