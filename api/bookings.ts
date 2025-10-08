@@ -112,6 +112,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const vehicleSelectionId = await generateVehicleSelectionId(dateTime, name);
       console.log("Generated vehicle selection ID:", vehicleSelectionId);
 
+      // Get current time in Pacific timezone (PST/PDT - handles daylight saving automatically)
+      const now = new Date();
+      const pacificTimeString = now.toLocaleString("en-US", { timeZone: "America/Los_Angeles" });
+      const pacificTime = new Date(pacificTimeString);
+      
       // map camelCase -> snake_case for DB
       const row: any = {
         id: String(bookingId),
@@ -125,6 +130,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         flight_number: flightNumber ? String(flightNumber) : null,
         pricing: pricing ?? null, // must be JSON-serializable for jsonb
         vehicle_selection_id: vehicleSelectionId,
+        created_at: pacificTime.toISOString(), // Explicitly set to Pacific time
       };
 
       console.log("Saving booking to Supabase:", { id: row.id, name: row.name });

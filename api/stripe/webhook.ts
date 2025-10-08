@@ -84,13 +84,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         if (bookingId) {
           try {
+            // Get current time in Pacific timezone (PST/PDT)
+            const now = new Date();
+            const pacificTimeString = now.toLocaleString("en-US", { timeZone: "America/Los_Angeles" });
+            const pacificTime = new Date(pacificTimeString);
+
             // Update booking status in Supabase
             const { error: updateError } = await supabase
               .from("bookings")
               .update({
                 payment_status: "completed",
                 payment_id: paymentIntent.id,
-                updated_at: new Date().toISOString(),
+                updated_at: pacificTime.toISOString(),
               })
               .eq("booking_id", bookingId);
 
@@ -117,12 +122,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         if (bookingId) {
           try {
+            // Get current time in Pacific timezone (PST/PDT)
+            const now = new Date();
+            const pacificTimeString = now.toLocaleString("en-US", { timeZone: "America/Los_Angeles" });
+            const pacificTime = new Date(pacificTimeString);
+
             // Update booking status to failed
             const { error: updateError } = await supabase
               .from("bookings")
               .update({
                 payment_status: "failed",
-                updated_at: new Date().toISOString(),
+                updated_at: pacificTime.toISOString(),
               })
               .eq("booking_id", bookingId);
 
