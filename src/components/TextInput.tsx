@@ -9,10 +9,12 @@ interface TextInputProps {
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   placeholder?: string;
   required?: boolean;
-  Icon?: React.ElementType; 
+  Icon?: React.ElementType;
+  min?: string;
+  max?: string;
 }
 
-const TextInput: React.FC<TextInputProps> = ({ label, name, type = 'text', value, onChange, placeholder, required = false, Icon }) => {
+const TextInput: React.FC<TextInputProps> = ({ label, name, type = 'text', value, onChange, placeholder, required = false, Icon, min, max }) => {
   return (
     <div className="mb-4">
       <label htmlFor={name} className="block text-sm font-medium text-brand-text-light mb-1">
@@ -32,6 +34,8 @@ const TextInput: React.FC<TextInputProps> = ({ label, name, type = 'text', value
           onChange={onChange}
           placeholder={placeholder}
           required={required}
+          min={min}
+          max={max}
           className={`w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-brand-primary focus:border-brand-primary sm:text-sm text-brand-text bg-white ${Icon ? 'pl-10' : ''}`}
         />
       </div>
