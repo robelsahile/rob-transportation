@@ -181,20 +181,20 @@ function generatePaymentConfirmationHTML({
       -ms-interpolation-mode: bicubic;
     }
     
-    /* Light mode (default) */
+    /* Fixed light mode only - no dark mode switching */
     .email-wrapper {
-      background-color: #F3F4F6;
+      background-color: #F3F4F6 !important;
     }
     
     .email-container {
-      background-color: #FFFFFF;
+      background-color: #FFFFFF !important;
       max-width: 600px;
       margin: 0 auto;
     }
     
     .header {
-      background-color: #1E3A8A;
-      color: #FFFFFF;
+      background-color: #1E3A8A !important;
+      color: #FFFFFF !important;
       padding: 32px 24px;
       text-align: center;
     }
@@ -215,7 +215,7 @@ function generatePaymentConfirmationHTML({
     
     .content {
       padding: 32px 24px;
-      color: #1F2937;
+      color: #1F2937 !important;
     }
     
     .success-badge {
@@ -232,16 +232,16 @@ function generatePaymentConfirmationHTML({
     .section-title {
       font-size: 20px;
       font-weight: 700;
-      color: #1F2937;
+      color: #1F2937 !important;
       margin: 0 0 16px 0;
     }
     
     .booking-summary {
-      background-color: #F9FAFB;
+      background-color: #F9FAFB !important;
       border-radius: 8px;
       padding: 20px;
       margin: 24px 0;
-      border: 1px solid #E5E7EB;
+      border: 1px solid #E5E7EB !important;
     }
     
     .detail-row {
@@ -257,21 +257,21 @@ function generatePaymentConfirmationHTML({
     
     .detail-label {
       font-weight: 600;
-      color: #6B7280;
+      color: #6B7280 !important;
       display: table-cell;
       width: 40%;
       vertical-align: top;
     }
     
     .detail-value {
-      color: #1F2937;
+      color: #1F2937 !important;
       display: table-cell;
       text-align: right;
       vertical-align: top;
     }
     
     .payment-box {
-      background: linear-gradient(135deg, #1E3A8A 0%, #3B82F6 100%);
+      background: #1E3A8A;
       border-radius: 12px;
       padding: 24px;
       margin: 24px 0;
@@ -294,10 +294,10 @@ function generatePaymentConfirmationHTML({
     }
     
     .footer {
-      background-color: #F9FAFB;
+      background-color: #F9FAFB !important;
       padding: 32px 24px;
       text-align: center;
-      color: #6B7280;
+      color: #6B7280 !important;
       font-size: 14px;
     }
     
@@ -306,7 +306,7 @@ function generatePaymentConfirmationHTML({
     }
     
     .footer-links a {
-      color: #1E3A8A;
+      color: #1E3A8A !important;
       text-decoration: none;
       margin: 0 12px;
     }
@@ -318,7 +318,7 @@ function generatePaymentConfirmationHTML({
     .social-links a {
       display: inline-block;
       margin: 0 8px;
-      color: #6B7280;
+      color: #6B7280 !important;
       text-decoration: none;
     }
     
@@ -378,7 +378,7 @@ function generatePaymentConfirmationHTML({
                 <!-- Payment Amount Box -->
                 <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
                   <tr>
-                    <td class="payment-box" style="background: linear-gradient(135deg, #1E3A8A 0%, #3B82F6 100%); border-radius: 12px; padding: 24px; margin: 24px 0; color: #FFFFFF; text-align: center;">
+                    <td class="payment-box" style="background: #1E3A8A; border-radius: 12px; padding: 24px; margin: 24px 0; color: #FFFFFF; text-align: center;">
                       <p style="margin: 0 0 4px 0; font-size: 14px; color: #E5E7EB; font-weight: 600;">AMOUNT PAID</p>
                       <p class="amount" style="font-size: 32px; font-weight: 700; margin: 0 0 12px 0; color: #FFFFFF;">${amountFormatted}</p>
                       <p class="payment-id" style="font-size: 15px; color: #FFFFFF; font-family: 'Courier New', monospace; font-weight: 500; margin: 0;">
