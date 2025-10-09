@@ -82,6 +82,63 @@ function generateSMSMessage(data: ReceiptData): string {
   return message;
 }
 
+// Export function for direct use
+export async function sendSMSReceipt(data: ReceiptData) {
+  if (!process.env.TWILIO_ACCOUNT_SID || !process.env.TWILIO_AUTH_TOKEN) {
+    console.error("Twilio credentials not configured");
+    return { success: false, error: "SMS service not configured" };
+  }
+
+  if (!process.env.TWILIO_PHONE_NUMBER) {
+    console.error("TWILIO_PHONE_NUMBER not configured");
+    return { success: false, error: "SMS service not configured" };
+  }
+
+  try {
+    const message = generateSMSMessage(data);
+
+    const response = await fetch(
+      `https://api.twilio.com/2010-04-01/Accounts/${process.env.TWILIO_ACCOUNT_SID}/Messages.json`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+          Authorization: `Basic ${Buffer.from(
+            `${process.env.TWILIO_ACCOUNT_SID}:${process.env.TWILIO_AUTH_TOKEN}`
+          ).toString("base64")}`,
+        },
+        body: new URLSearchParams({
+          From: process.env.TWILIO_PHONE_NUMBER,
+          To: data.customerPhone,
+          Body: message,
+        }),
+      }
+    );
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      console.error("Twilio API error:", result);
+      return { success: false, error: `Twilio API error: ${result.message || "Unknown error"}` };
+    }
+
+    console.log("SMS sent successfully:", result.sid);
+
+    return {
+      success: true,
+      messageId: result.sid,
+      message: "SMS receipt sent successfully",
+    };
+  } catch (error) {
+    console.error("Failed to send SMS receipt:", error);
+    return {
+      success: false,
+      error: "Failed to send SMS receipt",
+      details: error instanceof Error ? error.message : "Unknown error",
+    };
+  }
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // CORS / preflight
   if (req.method === "OPTIONS") {

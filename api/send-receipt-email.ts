@@ -240,6 +240,46 @@ function generateEmailHTML(data: ReceiptData): string {
   `.trim();
 }
 
+// Export function for direct use
+export async function sendEmailReceipt(data: ReceiptData) {
+  if (!process.env.RESEND_API_KEY) {
+    console.error("RESEND_API_KEY not configured");
+    return { success: false, error: "Email service not configured" };
+  }
+
+  try {
+    // Validate required fields
+    if (!data.customerEmail || !data.bookingId || !data.customerName) {
+      return { success: false, error: "Missing required fields" };
+    }
+
+    const emailHtml = generateEmailHTML(data);
+
+    const result = await resend.emails.send({
+      from: "Rob Transportation <noreply@robtransportation.com>",
+      to: [data.customerEmail],
+      subject: `Booking Confirmation - ${data.bookingId} | ROB Transportation`,
+      html: emailHtml,
+    });
+
+    console.log("Email sent successfully:", result.data?.id);
+
+    return { 
+      success: true, 
+      messageId: result.data?.id,
+      message: "Receipt email sent successfully" 
+    };
+
+  } catch (error) {
+    console.error("Failed to send receipt email:", error);
+    return { 
+      success: false,
+      error: "Failed to send receipt email",
+      details: error instanceof Error ? error.message : "Unknown error"
+    };
+  }
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // CORS / preflight
   if (req.method === "OPTIONS") {

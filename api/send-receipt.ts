@@ -12,6 +12,8 @@ interface ReceiptData {
   vehicleType: string;
   vehicleName?: string;
   flightNumber?: string;
+  passengers?: number;
+  notes?: string;
   pricing: {
     total: number;
     currency: string;
@@ -67,23 +69,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Send email if email is provided
     if (data.customerEmail) {
       try {
-        const emailResponse = await fetch(`${req.headers.origin || 'http://localhost:3000'}/api/send-receipt-email`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(data),
-        });
-
-        if (emailResponse.ok) {
-          const emailResult = await emailResponse.json();
+        // Import and call the email function directly instead of using fetch
+        const { sendEmailReceipt } = await import('./send-receipt-email');
+        const emailResult = await sendEmailReceipt(data);
+        
+        if (emailResult.success) {
           response.emailSent = true;
           response.emailMessageId = emailResult.messageId;
           console.log("Email sent successfully:", emailResult.messageId);
         } else {
-          const errorText = await emailResponse.text();
-          response.errors?.push(`Email failed: ${errorText}`);
-          console.error("Email sending failed:", errorText);
+          response.errors?.push(`Email failed: ${emailResult.error}`);
+          console.error("Email sending failed:", emailResult.error);
         }
       } catch (error) {
         const errorMsg = error instanceof Error ? error.message : "Unknown email error";
@@ -95,23 +91,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Send SMS if phone is provided
     if (data.customerPhone) {
       try {
-        const smsResponse = await fetch(`${req.headers.origin || 'http://localhost:3000'}/api/send-receipt-sms`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(data),
-        });
-
-        if (smsResponse.ok) {
-          const smsResult = await smsResponse.json();
+        // Import and call the SMS function directly instead of using fetch
+        const { sendSMSReceipt } = await import('./send-receipt-sms');
+        const smsResult = await sendSMSReceipt(data);
+        
+        if (smsResult.success) {
           response.smsSent = true;
           response.smsMessageId = smsResult.messageId;
           console.log("SMS sent successfully:", smsResult.messageId);
         } else {
-          const errorText = await smsResponse.text();
-          response.errors?.push(`SMS failed: ${errorText}`);
-          console.error("SMS sending failed:", errorText);
+          response.errors?.push(`SMS failed: ${smsResult.error}`);
+          console.error("SMS sending failed:", smsResult.error);
         }
       } catch (error) {
         const errorMsg = error instanceof Error ? error.message : "Unknown SMS error";
