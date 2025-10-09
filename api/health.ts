@@ -21,6 +21,10 @@ export default async function handler(_req: VercelRequest, res: VercelResponse) 
       TWILIO_ACCOUNT_SID: has("TWILIO_ACCOUNT_SID"),
       TWILIO_AUTH_TOKEN: has("TWILIO_AUTH_TOKEN"),
       TWILIO_PHONE_NUMBER: has("TWILIO_PHONE_NUMBER"),
+      STRIPE_SECRET_KEY: has("STRIPE_SECRET_KEY"),
+      STRIPE_WEBHOOK_SECRET: has("STRIPE_WEBHOOK_SECRET"),
+      FROM_EMAIL: has("FROM_EMAIL"),
+      ADMIN_EMAIL: has("ADMIN_EMAIL"),
     },
   });
 }
