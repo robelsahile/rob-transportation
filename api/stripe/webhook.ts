@@ -6,7 +6,7 @@ import { Resend } from "resend";
 
 // ---------- Stripe / Resend / Supabase setup ----------
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, {
-  apiVersion: "2025-09-30.clover",
+  apiVersion: "2024-06-20" as any, // Using valid API version
 });
 
 const supabase = createClient(
@@ -15,8 +15,7 @@ const supabase = createClient(
 );
 
 const resend = new Resend(process.env.RESEND_API_KEY as string);
-const FROM_EMAIL =
-  process.env.FROM_EMAIL || "Rob Transportation <bookings@robtransportation.com>";
+const FROM_EMAIL = process.env.FROM_EMAIL || "Rob Transportation <noreply@robtransportation.com>";
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "";
 
 async function getRawBody(req: VercelRequest): Promise<Buffer> {
@@ -38,87 +37,85 @@ function getBookingIdFromSession(session: Stripe.Checkout.Session): string | und
   );
 }
 
-function formatLocal(dt: Date | string | number, opts: Intl.DateTimeFormatOptions) {
-  const tz = "America/Los_Angeles";
-  return new Date(dt).toLocaleString("en-US", { timeZone: tz, ...opts });
-}
-
-async function sendConfirmationEmail(booking: any) {
-  const bookingId = booking.id;
-
-  // Try to present a nice total if you store cents in pricing.* or a number column
-  let amountStr: string | undefined = undefined;
+// Idempotency: Check if we've already processed this event
+async function isEventProcessed(eventId: string): Promise<boolean> {
   try {
-    if (typeof booking.total_amount === "number") {
-      // If you store dollars already, keep it; if cents, divide by 100.
-      amountStr =
-        booking.total_amount >= 1000
-          ? `$${(booking.total_amount / 100).toFixed(2)}`
-          : `$${booking.total_amount.toFixed(2)}`;
-    } else if (booking.pricing && typeof booking.pricing.total === "number") {
-      const cents = booking.pricing.total;
-      amountStr = `$${(cents / 100).toFixed(2)}`;
-    }
+    const { data, error } = await supabase
+      .from('processed_events')
+      .select('id')
+      .eq('id', eventId)
+      .single();
+    
+    return !error && !!data;
   } catch {
-    /* ignore money formatting errors */
+    return false;
   }
-
-  const dateStr = formatLocal(booking.date_time ?? booking.pickup_date, {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-
-  const timeStr = formatLocal(booking.date_time ?? booking.pickup_time, {
-    hour: "numeric",
-    minute: "2-digit",
-    hour12: true,
-  });
-
-  const toEmail = booking.email;
-  if (!toEmail) {
-    console.warn("Booking has no email; skipping send.", { bookingId });
-    return;
-  }
-
-  const html = `
-    <div style="font-family:Arial,sans-serif;line-height:1.6">
-      <h2 style="margin:0 0 8px">Your Booking is Confirmed 🎉</h2>
-      <p style="margin:0 0 12px">Thank you for choosing Rob Transportation.</p>
-
-      <p style="margin:0 0 12px"><strong>Booking ID:</strong> ${bookingId}</p>
-
-      <div style="border-top:1px solid #eee;margin:16px 0"></div>
-
-      <p style="margin:0 0 6px"><strong>Pickup:</strong> ${booking.pickup_location ?? ""}</p>
-      <p style="margin:0 0 6px"><strong>Drop-off:</strong> ${booking.dropoff_location ?? ""}</p>
-      <p style="margin:0 0 6px"><strong>Date:</strong> ${dateStr}</p>
-      <p style="margin:0 0 6px"><strong>Time:</strong> ${timeStr}</p>
-      ${booking.vehicle_type ? `<p style="margin:0 0 6px"><strong>Vehicle:</strong> ${booking.vehicle_type}</p>` : ""}
-      ${Number.isFinite(booking.passengers) ? `<p style="margin:0 0 6px"><strong>Passengers:</strong> ${booking.passengers}</p>` : ""}
-
-      ${booking.notes ? `<div style="border-top:1px solid #eee;margin:16px 0"></div><p style="margin:0"><strong>Notes:</strong> ${booking.notes}</p>` : ""}
-
-      <div style="border-top:1px solid #eee;margin:16px 0"></div>
-
-      <p style="margin:0 0 12px"><strong>Payment:</strong> ${amountStr ? `${amountStr} (Paid)` : "Received"}</p>
-
-      <p style="color:#666;margin:16px 0 0">If anything looks off, just reply to this email.</p>
-      <p style="margin:4px 0 0">— Rob Transportation</p>
-    </div>
-  `;
-
-  await resend.emails.send({
-    from: FROM_EMAIL,
-    to: [toEmail],
-    ...(ADMIN_EMAIL ? { bcc: [ADMIN_EMAIL] } : {}),
-    subject: `Booking Confirmed – ${bookingId}`,
-    html,
-  });
-
-  console.log("Confirmation email sent →", toEmail);
 }
+
+// Idempotency: Mark event as processed
+async function markEventProcessed(eventId: string): Promise<void> {
+  try {
+    await supabase
+      .from('processed_events')
+      .upsert({ id: eventId, processed_at: new Date().toISOString() });
+  } catch (error) {
+    console.error('Failed to mark event as processed:', error);
+  }
+}
+
+// Send receipt email with proper error handling
+async function sendReceiptEmail({ email, amount, paymentIntentId, sessionId, chargeId }: {
+  email: string;
+  amount: number;
+  paymentIntentId?: string;
+  sessionId?: string;
+  chargeId?: string;
+}): Promise<void> {
+  try {
+    const amountFormatted = new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD'
+    }).format(amount / 100);
+
+    const html = `
+      <div style="font-family:Arial,sans-serif;line-height:1.6">
+        <h2 style="margin:0 0 8px">Payment Received 🎉</h2>
+        <p style="margin:0 0 12px">Thank you for your payment to Rob Transportation.</p>
+        
+        <div style="border-top:1px solid #eee;margin:16px 0"></div>
+        
+        <p style="margin:0 0 6px"><strong>Amount:</strong> ${amountFormatted}</p>
+        ${paymentIntentId ? `<p style="margin:0 0 6px"><strong>Payment ID:</strong> ${paymentIntentId}</p>` : ''}
+        ${sessionId ? `<p style="margin:0 0 6px"><strong>Session ID:</strong> ${sessionId}</p>` : ''}
+        ${chargeId ? `<p style="margin:0 0 6px"><strong>Charge ID:</strong> ${chargeId}</p>` : ''}
+        
+        <div style="border-top:1px solid #eee;margin:16px 0"></div>
+        
+        <p style="color:#666;margin:16px 0 0">If you have any questions, please contact us.</p>
+        <p style="margin:4px 0 0">— Rob Transportation</p>
+      </div>
+    `;
+
+    const { data, error } = await resend.emails.send({
+      from: FROM_EMAIL,
+      to: [email],
+      ...(ADMIN_EMAIL ? { bcc: [ADMIN_EMAIL] } : {}),
+      subject: `Payment Confirmed - ${amountFormatted} | ROB Transportation`,
+      html,
+    });
+
+    if (error) {
+      console.error('Resend error:', error);
+      throw new Error(`Resend failed: ${String(error)}`);
+    }
+
+    console.log('Receipt email sent successfully:', data?.id);
+  } catch (error) {
+    console.error('Failed to send receipt email:', error);
+    throw error;
+  }
+}
+
 
 // ---------- Main handler ----------
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -139,67 +136,99 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    // We support either event based on how your Checkout was configured.
-    if (
-      event.type === "checkout.session.completed" ||
-      event.type === "payment_intent.succeeded"
-    ) {
-      let bookingId: string | undefined;
-
-      if (event.type === "checkout.session.completed") {
-        const session = event.data.object as Stripe.Checkout.Session;
-        bookingId = getBookingIdFromSession(session);
-        console.log("checkout.session.completed → bookingId:", bookingId);
-      } else {
-        // payment_intent.succeeded path: if you attached metadata on the PI
-        const pi = event.data.object as Stripe.PaymentIntent;
-        bookingId =
-          (pi.metadata?.booking_id as string | undefined) ||
-          (pi.metadata?.bookingId as string | undefined);
-        console.log("payment_intent.succeeded → bookingId:", bookingId);
-      }
-
-      if (!bookingId) {
-        console.warn("No bookingId present; skipping.");
-        return res.json({ received: true });
-      }
-
-      // -------- Fix #1: update Supabase using id (not booking_id) --------
-      const { error: upErr } = await supabase
-        .from("bookings")
-        .update({ payment_status: "paid", paid_at: new Date().toISOString() })
-        .eq("id", bookingId);
-
-      if (upErr) {
-        console.error("Supabase update failed:", upErr);
-      } else {
-        console.log("Booking updated successfully:", bookingId);
-      }
-
-      // Fetch full row to email
-      const { data: booking, error: fetchErr } = await supabase
-        .from("bookings")
-        .select("*")
-        .eq("id", bookingId)
-        .single();
-
-      if (fetchErr || !booking) {
-        console.error("Failed to fetch booking for email:", fetchErr);
-        return res.json({ received: true });
-      }
-
-      // -------- Fix #2: send the confirmation email via Resend --------
-      try {
-        await sendConfirmationEmail(booking);
-      } catch (emailErr) {
-        console.error("Resend send error:", emailErr);
-      }
-
-      return res.json({ received: true });
+    // Idempotency: Check if we've already processed this event
+    const eventId = event.id;
+    if (await isEventProcessed(eventId)) {
+      console.log('Event already processed, returning 200:', eventId);
+      return res.json({ received: true, already_processed: true });
     }
 
-    // You can handle failures/cancellations here if you want to mark them
-    // else just acknowledge
+    console.log('Processing webhook event:', event.type, eventId);
+
+    // Handle different event types
+    switch (event.type) {
+      case 'payment_intent.succeeded': {
+        const pi = event.data.object as Stripe.PaymentIntent;
+        const email =
+          pi.receipt_email ||
+          (typeof pi.customer !== 'string' && pi.customer && 'email' in pi.customer ? pi.customer.email : null);
+
+        console.log('payment_intent.succeeded:', { id: pi.id, email, amount: pi.amount_received });
+
+        if (email && pi.amount_received) {
+          await sendReceiptEmail({ 
+            email, 
+            amount: pi.amount_received, 
+            paymentIntentId: pi.id 
+          });
+        }
+
+        // Update booking status if bookingId exists in metadata
+        const bookingId = pi.metadata?.booking_id || pi.metadata?.bookingId;
+        if (bookingId) {
+          await supabase
+            .from("bookings")
+            .update({ payment_status: "paid", paid_at: new Date().toISOString() })
+            .eq("id", bookingId);
+          console.log('Booking updated:', bookingId);
+        }
+        break;
+      }
+
+      case 'checkout.session.completed': {
+        const sess = event.data.object as Stripe.Checkout.Session;
+        const email =
+          sess.customer_details?.email ||
+          (typeof sess.customer !== 'string' && sess.customer && 'email' in sess.customer ? sess.customer.email : null) ||
+          sess.customer_email || null;
+
+        console.log('checkout.session.completed:', { id: sess.id, email, amount: sess.amount_total });
+
+        if (email && sess.amount_total) {
+          await sendReceiptEmail({ 
+            email, 
+            amount: sess.amount_total, 
+            sessionId: sess.id 
+          });
+        }
+
+        // Update booking status if bookingId exists
+        const bookingId = getBookingIdFromSession(sess);
+        if (bookingId) {
+          await supabase
+            .from("bookings")
+            .update({ payment_status: "paid", paid_at: new Date().toISOString() })
+            .eq("id", bookingId);
+          console.log('Booking updated:', bookingId);
+        }
+        break;
+      }
+
+      case 'charge.succeeded': {
+        const ch = event.data.object as Stripe.Charge;
+        const email = ch.billing_details?.email || null;
+        
+        console.log('charge.succeeded:', { id: ch.id, email, amount: ch.amount });
+
+        if (email) {
+          await sendReceiptEmail({ 
+            email, 
+            amount: ch.amount, 
+            chargeId: ch.id 
+          });
+        }
+        break;
+      }
+
+      default: {
+        console.log('Unhandled event type:', event.type);
+        break;
+      }
+    }
+
+    // Mark event as processed for idempotency
+    await markEventProcessed(eventId);
+
     return res.json({ received: true });
   } catch (e) {
     console.error("Webhook handler error:", e);
