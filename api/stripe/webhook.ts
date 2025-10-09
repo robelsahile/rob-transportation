@@ -388,7 +388,6 @@ function generatePaymentConfirmationHTML({
                   </tr>
                 </table>
                 
-                ${booking ? `
                 <!-- Booking Summary -->
                 <h3 class="section-title" style="font-size: 18px; font-weight: 700; color: #1F2937; margin: 24px 0 16px 0;">
                   Booking Details
@@ -439,7 +438,6 @@ function generatePaymentConfirmationHTML({
                   
                   ${!notes && !passengers ? '<div style="border-bottom: none;"></div>' : ''}
                 </div>
-                ` : ''}
                 
                 <!-- Contact Info -->
                 <div style="margin-top: 32px; padding: 20px; background-color: #FEF3C7; border-left: 4px solid #FBBF24; border-radius: 4px;">
@@ -511,6 +509,21 @@ async function sendReceiptEmail({ email, amount, paymentIntentId, sessionId, cha
       booking = await getBookingDetails(bookingId);
       console.log('Booking details fetched:', booking ? 'success' : 'not found');
     }
+    
+    // Log for debugging - this will help us see what's happening
+    console.log('Email generation data:', {
+      email,
+      bookingId,
+      amount: amount / 100,
+      paymentId: paymentIntentId || sessionId || chargeId,
+      hasBooking: !!booking,
+      bookingData: booking ? {
+        pickup: booking.pickup_location,
+        dropoff: booking.dropoff_location,
+        vehicle: booking.vehicle_type,
+        name: booking.name
+      } : null
+    });
 
     const paymentId = paymentIntentId || sessionId || chargeId || 'N/A';
     const customerName = booking ? booking.name : undefined;
