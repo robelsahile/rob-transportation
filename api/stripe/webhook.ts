@@ -29,12 +29,21 @@ async function getRawBody(req: VercelRequest): Promise<Buffer> {
 // ---------- Helpers ----------
 function getBookingIdFromSession(session: Stripe.Checkout.Session): string | undefined {
   // Try common metadata keys you may have used
-  return (
+  const bookingId = (
     session.metadata?.booking_id ||
     session.metadata?.bookingId ||
     session.client_reference_id || // optional fallback
     undefined
   );
+  
+  console.log('Extracting booking ID from session:', {
+    sessionId: session.id,
+    metadata: session.metadata,
+    client_reference_id: session.client_reference_id,
+    extractedBookingId: bookingId
+  });
+  
+  return bookingId;
 }
 
 // Idempotency: Check if we've already processed this event
@@ -95,6 +104,8 @@ function formatDateTime(dateTime: string): string {
 // Fetch booking details from Supabase
 async function getBookingDetails(bookingId: string): Promise<any | null> {
   try {
+    console.log('Fetching booking details for ID:', bookingId);
+    
     const { data, error } = await supabase
       .from('bookings')
       .select('*')
@@ -102,9 +113,31 @@ async function getBookingDetails(bookingId: string): Promise<any | null> {
       .single();
     
     if (error) {
-      console.error('Failed to fetch booking details:', error);
+      console.error('Supabase error fetching booking details:', {
+        bookingId,
+        error: error.message,
+        code: error.code,
+        details: error.details,
+        hint: error.hint
+      });
       return null;
     }
+    
+    if (!data) {
+      console.log('No booking data found for ID:', bookingId);
+      return null;
+    }
+    
+    console.log('Successfully fetched booking data:', {
+      id: data.id,
+      pickup_location: data.pickup_location,
+      dropoff_location: data.dropoff_location,
+      vehicle_type: data.vehicle_type,
+      date_time: data.date_time,
+      name: data.name,
+      passengers: data.passengers,
+      notes: data.notes
+    });
     
     return data;
   } catch (error) {
@@ -137,6 +170,17 @@ function generatePaymentConfirmationHTML({
   const passengers = booking?.passengers;
   const notes = booking?.notes;
   const pricing = booking?.pricing;
+  
+  // Debug log the extracted values
+  console.log('Extracted booking values for email:', {
+    pickupLocation,
+    dropoffLocation,
+    dateTime,
+    vehicleType,
+    passengers,
+    notes,
+    hasBooking: !!booking
+  });
   
   return `
 <!DOCTYPE html>
@@ -597,6 +641,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         // Get booking ID from metadata
         const bookingId = pi.metadata?.booking_id || pi.metadata?.bookingId;
+        
+        console.log('Payment Intent metadata:', {
+          paymentIntentId: pi.id,
+          metadata: pi.metadata,
+          extractedBookingId: bookingId
+        });
 
         if (email && pi.amount_received) {
           await sendReceiptEmail({ 
@@ -658,6 +708,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         // Try to get booking ID from charge metadata
         const bookingId = ch.metadata?.booking_id || ch.metadata?.bookingId;
+        
+        console.log('Charge metadata:', {
+          chargeId: ch.id,
+          metadata: ch.metadata,
+          extractedBookingId: bookingId
+        });
 
         if (email) {
           await sendReceiptEmail({ 
