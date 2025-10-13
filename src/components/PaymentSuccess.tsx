@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
 import type { BookingFormData } from "../types";
-import { VehicleType } from "../types";
 
 type PricingSnapshot = {
   vehicle?: string;
@@ -45,26 +44,55 @@ export default function PaymentSuccess({
   useEffect(() => {
     const loadBookingData = async () => {
       try {
+        // First try to get bookingId from rt_last_payment
         const ctx = JSON.parse(localStorage.getItem("rt_last_payment") || "null");
+        console.log("Payment context:", ctx);
+        
         if (ctx?.bookingId) {
           setBookingId(ctx.bookingId);
           const key = `rt_pending_${ctx.bookingId}`;
+          console.log("Looking for booking data with key:", key);
+          
+          const pending = JSON.parse(localStorage.getItem(key) || "null");
+          console.log("Found pending data:", pending);
+          
+          if (pending?.details) {
+            setBooking(pending.details);
+            if (pending?.pricing) setPricing(pending.pricing);
+            console.log("Successfully loaded booking data from localStorage:", pending.details);
+            return;
+          }
+        }
+        
+        // Fallback: try rt_pending_last
+        const lastPendingId = localStorage.getItem("rt_pending_last");
+        console.log("Trying rt_pending_last:", lastPendingId);
+        
+        if (lastPendingId) {
+          setBookingId(lastPendingId);
+          const key = `rt_pending_${lastPendingId}`;
           const pending = JSON.parse(localStorage.getItem(key) || "null");
           if (pending?.details) {
             setBooking(pending.details);
             if (pending?.pricing) setPricing(pending.pricing);
-            return; // Successfully loaded from localStorage
+            console.log("Successfully loaded booking data from rt_pending_last:", pending.details);
+            return;
           }
-          
-          // If localStorage data is not available, fetch from database
-          console.log("LocalStorage data not found, fetching from database...");
-          const response = await fetch(`/api/get-booking?bookingId=${encodeURIComponent(ctx.bookingId)}`);
-          if (response.ok) {
+        }
+        
+        console.error("No booking data found in localStorage");
+        console.log("Available localStorage keys:", Object.keys(localStorage));
+        
+        // If we still don't have booking data, try to fetch from the new API
+        if (ctx?.bookingId) {
+          console.log("Attempting to fetch booking data from API...");
+          try {
+            const response = await fetch(`/api/get-booking?bookingId=${encodeURIComponent(ctx.bookingId)}`);
             const result = await response.json();
+            
             if (result.success && result.booking) {
               const dbBooking = result.booking;
-              // Transform database booking to BookingFormData format
-              const bookingData: BookingFormData = {
+              const bookingData = {
                 pickupLocation: dbBooking.pickupLocation,
                 dropoffLocation: dbBooking.dropoffLocation,
                 dateTime: dbBooking.dateTime,
@@ -78,28 +106,20 @@ export default function PaymentSuccess({
               };
               setBooking(bookingData);
               if (dbBooking.pricing) setPricing(dbBooking.pricing);
-              console.log("Successfully loaded booking data from database");
+              console.log("Successfully loaded booking data from API:", bookingData);
               return;
             }
+          } catch (error) {
+            console.error("Failed to fetch booking data from API:", error);
           }
-          console.error("Failed to fetch booking data from database");
         }
+        
+        // If we still don't have booking data, this is a critical error
+        console.error("CRITICAL: No booking data available for email generation!");
+        
       } catch (error) {
         console.error("Error loading booking data:", error);
       }
-      
-      // Fallback: create minimal booking display only if we can't get real data
-      console.log("Creating fallback booking display");
-      setBooking({
-        pickupLocation: "Payment completed successfully",
-        dropoffLocation: "Thank you for your business!",
-        dateTime: new Date().toISOString(),
-        vehicleType: VehicleType.SEDAN,
-        name: "Customer",
-        phone: "",
-        email: "",
-        flightNumber: ""
-      });
     };
 
     loadBookingData();
@@ -108,13 +128,21 @@ export default function PaymentSuccess({
   // Automatically send receipt when component loads with all required data
   useEffect(() => {
     (async () => {
-      if (!bookingId || !booking) return;
+      // Wait for both bookingId and booking data to be loaded
+      if (!bookingId || !booking) {
+        console.log("Waiting for booking data to load:", { bookingId: !!bookingId, booking: !!booking });
+        return;
+      }
+      
+      console.log("All data loaded, proceeding with admin notification and receipt sending");
+      
       // Ensure Admin receives booking immediately upon success (idempotent)
       try {
         await postToAdmin();
       } catch {}
 
       if (paymentId && !receiptStatus.sending && !receiptStatus.sent) {
+        console.log("Sending receipt with data:", { bookingId, customerName: booking.name, email: booking.email });
         sendReceipt();
       }
     })();
@@ -177,6 +205,18 @@ export default function PaymentSuccess({
       return;
     }
 
+    // Validate that we have all the required booking data
+    if (!booking.name || !booking.email || !booking.pickupLocation || !booking.dropoffLocation) {
+      console.error("Missing required booking data for email:", {
+        name: booking.name,
+        email: booking.email,
+        pickupLocation: booking.pickupLocation,
+        dropoffLocation: booking.dropoffLocation
+      });
+      setReceiptStatus({ sending: false, sent: false, error: "Missing required booking data" });
+      return;
+    }
+
     setReceiptStatus({ sending: true, sent: false, error: null });
 
     try {
@@ -197,7 +237,7 @@ export default function PaymentSuccess({
         paymentId,
       };
 
-      console.log("Sending receipt:", { bookingId, email: booking.email, phone: booking.phone });
+      console.log("Sending receipt with complete data:", receiptData);
 
       const res = await fetch("/api/send-receipt", {
         method: "POST",
