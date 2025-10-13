@@ -53,9 +53,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     const data: ReceiptData = req.body;
+    console.log("🔍 Receipt API called with data:", {
+      bookingId: data.bookingId,
+      customerName: data.customerName,
+      customerEmail: data.customerEmail,
+      customerPhone: data.customerPhone,
+      hasPricing: !!data.pricing
+    });
 
     // Validate required fields
     if (!data.bookingId || !data.customerName || (!data.customerEmail && !data.customerPhone)) {
+      console.error("❌ Missing required fields:", {
+        bookingId: !!data.bookingId,
+        customerName: !!data.customerName,
+        customerEmail: !!data.customerEmail,
+        customerPhone: !!data.customerPhone
+      });
       return res.status(400).json({ error: "Missing required fields" });
     }
 

@@ -85,12 +85,28 @@ function generateSMSMessage(data: ReceiptData): string {
 // Export function for direct use
 export async function sendSMSReceipt(data: ReceiptData) {
   if (!process.env.TWILIO_ACCOUNT_SID || !process.env.TWILIO_AUTH_TOKEN) {
-    console.error("Twilio credentials not configured");
+    console.warn("⚠️ Twilio credentials not configured - simulating SMS send in development");
+    // In development, simulate successful SMS sending
+    if (process.env.NODE_ENV === "development" || !process.env.NODE_ENV) {
+      return { 
+        success: true, 
+        messageId: "dev_simulated_sms_" + Date.now(),
+        message: "SMS simulated in development (Twilio credentials not configured)" 
+      };
+    }
     return { success: false, error: "SMS service not configured" };
   }
 
   if (!process.env.TWILIO_PHONE_NUMBER) {
-    console.error("TWILIO_PHONE_NUMBER not configured");
+    console.warn("⚠️ TWILIO_PHONE_NUMBER not configured - simulating SMS send in development");
+    // In development, simulate successful SMS sending
+    if (process.env.NODE_ENV === "development" || !process.env.NODE_ENV) {
+      return { 
+        success: true, 
+        messageId: "dev_simulated_sms_" + Date.now(),
+        message: "SMS simulated in development (TWILIO_PHONE_NUMBER not configured)" 
+      };
+    }
     return { success: false, error: "SMS service not configured" };
   }
 

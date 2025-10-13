@@ -264,12 +264,16 @@ export default function PaymentSuccess({
       });
 
       const result = await res.json();
-      console.log("Receipt API response:", result);
+      console.log("🔍 Receipt API response:", result);
+      console.log("🔍 Response status:", res.status);
+      console.log("🔍 Response ok:", res.ok);
+      console.log("🔍 Result success:", result.success);
 
       if (res.ok && result.success) {
         setReceiptStatus({ sending: false, sent: true, error: null });
         console.log("✅ Receipt sent successfully:", result);
       } else {
+        console.error("❌ Receipt failed - Status:", res.status, "Success:", result.success, "Error:", result.error);
         throw new Error(result.error || "Failed to send receipt");
       }
     } catch (error) {

@@ -244,14 +244,34 @@ function generateEmailHTML(data: ReceiptData): string {
 
 // Export function for direct use
 export async function sendEmailReceipt(data: ReceiptData) {
+  console.log("🔍 Email function called with data:", {
+    customerEmail: data.customerEmail,
+    bookingId: data.bookingId,
+    customerName: data.customerName,
+    hasResendKey: !!process.env.RESEND_API_KEY
+  });
+
   if (!process.env.RESEND_API_KEY) {
-    console.error("RESEND_API_KEY not configured");
+    console.warn("⚠️ RESEND_API_KEY not configured - simulating email send in development");
+    // In development, simulate successful email sending
+    if (process.env.NODE_ENV === "development" || !process.env.NODE_ENV) {
+      return { 
+        success: true, 
+        messageId: "dev_simulated_" + Date.now(),
+        message: "Email simulated in development (RESEND_API_KEY not configured)" 
+      };
+    }
     return { success: false, error: "Email service not configured" };
   }
 
   try {
     // Validate required fields
     if (!data.customerEmail || !data.bookingId || !data.customerName) {
+      console.error("❌ Missing required fields for email:", {
+        customerEmail: !!data.customerEmail,
+        bookingId: !!data.bookingId,
+        customerName: !!data.customerName
+      });
       return { success: false, error: "Missing required fields" };
     }
 
@@ -264,7 +284,8 @@ export async function sendEmailReceipt(data: ReceiptData) {
       html: emailHtml,
     });
 
-    console.log("Email sent successfully:", result.data?.id);
+    console.log("✅ Email sent successfully:", result.data?.id);
+    console.log("✅ Full Resend result:", result);
 
     return { 
       success: true, 
@@ -273,7 +294,11 @@ export async function sendEmailReceipt(data: ReceiptData) {
     };
 
   } catch (error) {
-    console.error("Failed to send receipt email:", error);
+    console.error("❌ Failed to send receipt email:", error);
+    console.error("❌ Error details:", {
+      message: error instanceof Error ? error.message : "Unknown error",
+      stack: error instanceof Error ? error.stack : undefined
+    });
     return { 
       success: false,
       error: "Failed to send receipt email",
