@@ -148,6 +148,25 @@ export default function PaymentSuccess({
     })();
   }, [bookingId, booking, paymentId]);
 
+  // Additional effect to ensure receipt is sent immediately when paymentId is available
+  useEffect(() => {
+    if (paymentId && bookingId && booking && !receiptStatus.sending && !receiptStatus.sent) {
+      console.log("Payment ID detected, attempting immediate receipt sending");
+      // Small delay to ensure all data is ready, then try multiple times
+      setTimeout(() => {
+        sendReceipt();
+      }, 1000);
+      
+      // Retry after 3 seconds if first attempt fails
+      setTimeout(() => {
+        if (!receiptStatus.sent && !receiptStatus.sending) {
+          console.log("Retrying receipt sending after initial attempt");
+          sendReceipt();
+        }
+      }, 4000);
+    }
+  }, [paymentId]);
+
   const totalDisplay = useMemo(() => {
     if (!pricing?.total || !pricing?.currency) return "";
     try {
@@ -277,9 +296,10 @@ export default function PaymentSuccess({
   async function handleDone() {
     try {
       await postToAdmin(); // idempotent upsert by bookingId on the server
-      await sendReceipt(); // send receipt via email and SMS
+      // Don't resend receipt here - it should have been sent automatically
+      console.log("Done button clicked - receipt should already be sent");
     } catch (e) {
-      console.error("Failed to persist booking or send receipt from PaymentSuccess:", e);
+      console.error("Failed to persist booking from Done button:", e);
     } finally {
       cleanupAndReturnHome();
     }
