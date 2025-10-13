@@ -62,6 +62,12 @@ function generateEmailHTML(data: ReceiptData): string {
   const totalAmount = data.pricing?.total ? formatCurrency(data.pricing.total, data.pricing.currency) : "N/A";
   const formattedDateTime = formatDateTime(data.dateTime);
   const vehicleDisplayName = data.vehicleName || data.vehicleType || "Selected Vehicle";
+  
+  // Helper function to safely display values
+  const safeDisplay = (value: string | undefined | null, fallback: string = "N/A"): string => {
+    if (!value || value.trim() === "") return fallback;
+    return value.trim();
+  };
 
   return `
 <!DOCTYPE html>
@@ -116,45 +122,41 @@ function generateEmailHTML(data: ReceiptData): string {
         </div>
         
         <div class="detail-row">
-          <span class="detail-label">Pickup Location</span>
-          <span class="detail-value">${data.pickupLocation}</span>
+          <span class="detail-label">Service</span>
+          <span class="detail-value">${safeDisplay(vehicleDisplayName, "Selected Vehicle")}</span>
         </div>
         
         <div class="detail-row">
-          <span class="detail-label">Drop-off Location</span>
-          <span class="detail-value">${data.dropoffLocation}</span>
+          <span class="detail-label">Pickup</span>
+          <span class="detail-value">${safeDisplay(data.pickupLocation)}</span>
+        </div>
+        
+        <div class="detail-row">
+          <span class="detail-label">Drop-off</span>
+          <span class="detail-value">${safeDisplay(data.dropoffLocation)}</span>
         </div>
         
         <div class="detail-row">
           <span class="detail-label">Date & Time</span>
-          <span class="detail-value">${formattedDateTime}</span>
+          <span class="detail-value">${safeDisplay(formattedDateTime)}</span>
         </div>
         
         <div class="detail-row">
-          <span class="detail-label">Vehicle</span>
-          <span class="detail-value">${vehicleDisplayName}</span>
+          <span class="detail-label">Passengers</span>
+          <span class="detail-value">${data.passengers ? data.passengers.toString() : "N/A"}</span>
         </div>
-        
-        ${data.passengers ? `
-        <div class="detail-row">
-          <span class="detail-label">Number of Passengers</span>
-          <span class="detail-value">${data.passengers}</span>
-        </div>
-        ` : ''}
         
         ${data.flightNumber ? `
         <div class="detail-row">
           <span class="detail-label">Flight Number</span>
-          <span class="detail-value">${data.flightNumber}</span>
+          <span class="detail-value">${safeDisplay(data.flightNumber)}</span>
         </div>
         ` : ''}
         
-        ${data.notes ? `
         <div class="detail-row">
-          <span class="detail-label">Additional Notes</span>
-          <span class="detail-value" style="white-space: pre-wrap;">${data.notes}</span>
+          <span class="detail-label">Notes</span>
+          <span class="detail-value" style="white-space: pre-wrap;">${safeDisplay(data.notes)}</span>
         </div>
-        ` : ''}
         
         <div class="detail-row">
           <span class="detail-label">Payment ID</span>

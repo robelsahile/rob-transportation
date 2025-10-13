@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Payment Confirmation - ROB Transportation (Preview)</title>
+    <!--[if mso]>
+      <noscript>
+        <xml>
+          <o:OfficeDocumentSettings>
+            <o:PixelsPerInch>96</o:PixelsPerInch>
+          </o:OfficeDocumentSettings>
+        </xml>
+      </noscript>
+    <![endif]-->
+    <style>
+      /* Base styles */
+      body {
+        margin: 0;
+        padding: 0;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          Oxygen, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+        line-height: 1.6;
+        -webkit-font-smoothing: antialiased;
+        -webkit-text-size-adjust: 100%;
+        -ms-text-size-adjust: 100%;
+      }
+
+      table {
+        border-collapse: collapse;
+        mso-table-lspace: 0pt;
+        mso-table-rspace: 0pt;
+      }
+
+      img {
+        border: 0;
+        height: auto;
+        line-height: 100%;
+        outline: none;
+        text-decoration: none;
+        -ms-interpolation-mode: bicubic;
+      }
+
+      /* Fixed light mode only - no dark mode switching */
+      .email-wrapper {
+        background-color: #f3f4f6 !important;
+      }
+
+      .email-container {
+        background-color: #ffffff !important;
+        max-width: 600px;
+        margin: 0 auto;
+      }
+
+      .header {
+        background-color: #1e3a8a;
+        color: #ffffff;
+        padding: 32px 24px;
+        text-align: center;
+      }
+
+      .header h1 {
+        margin: 0 0 8px 0;
+        font-size: 28px;
+        font-weight: 700;
+        color: #ffffff;
+      }
+
+      .header p {
+        margin: 0;
+        font-size: 14px;
+        color: #e5e7eb;
+        opacity: 0.95;
+      }
+
+      .content {
+        padding: 32px 24px;
+        color: #1f2937;
+      }
+
+      .success-badge {
+        background-color: #10b981;
+        color: #ffffff;
+        padding: 10px 20px;
+        border-radius: 24px;
+        font-size: 14px;
+        font-weight: 600;
+        display: inline-block;
+        margin-bottom: 24px;
+      }
+
+      .section-title {
+        font-size: 20px;
+        font-weight: 700;
+        color: #1f2937;
+        margin: 0 0 16px 0;
+      }
+
+      .booking-summary {
+        background-color: #f9fafb;
+        border-radius: 8px;
+        padding: 20px;
+        margin: 24px 0;
+        border: 1px solid #e5e7eb;
+      }
+
+      .detail-row {
+        display: table;
+        width: 100%;
+        padding: 12px 0;
+        border-bottom: 1px solid #e5e7eb;
+      }
+
+      .detail-row:last-child {
+        border-bottom: none;
+      }
+
+      .detail-label {
+        font-weight: 600;
+        color: #6b7280;
+        display: table-cell;
+        width: 40%;
+        vertical-align: top;
+      }
+
+      .detail-value {
+        color: #1f2937;
+        display: table-cell;
+        text-align: right;
+        vertical-align: top;
+      }
+
+      .payment-box {
+        background: #1e3a8a;
+        border-radius: 12px;
+        padding: 24px;
+        margin: 24px 0;
+        color: #ffffff;
+        text-align: center;
+      }
+
+      .payment-box .amount {
+        font-size: 32px;
+        font-weight: 700;
+        margin: 0 0 8px 0;
+        color: #ffffff;
+      }
+
+      .payment-box .payment-id {
+        font-size: 15px;
+        color: #ffffff;
+        font-family: "Courier New", monospace;
+        font-weight: 500;
+      }
+
+      .footer {
+        background-color: #f9fafb;
+        padding: 32px 24px;
+        text-align: center;
+        color: #6b7280;
+        font-size: 14px;
+      }
+
+      .footer-links {
+        margin: 16px 0;
+      }
+
+      .footer-links a {
+        color: #1e3a8a;
+        text-decoration: none;
+        margin: 0 12px;
+      }
+
+      .social-links {
+        margin: 16px 0;
+      }
+
+      .social-links a {
+        display: inline-block;
+        margin: 0 8px;
+        color: #6b7280;
+        text-decoration: none;
+      }
+
+      /* Responsive */
+      @media only screen and (max-width: 600px) {
+        .header h1 {
+          font-size: 24px !important;
+        }
+
+        .payment-box .amount {
+          font-size: 28px !important;
+        }
+
+        .content {
+          padding: 24px 16px !important;
+        }
+
+        .footer-links a {
+          display: block;
+          margin: 8px 0 !important;
+        }
+      }
+
+      /* Preview banner */
+      .preview-banner {
+        background: linear-gradient(135deg, #7c3aed 0%, #db2777 100%);
+        color: white;
+        padding: 12px 20px;
+        text-align: center;
+        font-weight: 600;
+        font-size: 14px;
+        position: sticky;
+        top: 0;
+        z-index: 1000;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+    </style>
+  </head>
+  <body style="margin: 0; padding: 0">
+    <!-- Preview Banner -->
+    <div class="preview-banner">
+      📧 EMAIL PREVIEW - This is how your payment confirmation email will look
+    </div>
+
+    <div
+      class="email-wrapper"
+      style="background-color: #f3f4f6; padding: 20px 0"
+    >
+      <table
+        role="presentation"
+        width="100%"
+        cellspacing="0"
+        cellpadding="0"
+        border="0"
+      >
+        <tr>
+          <td align="center">
+            <table
+              class="email-container"
+              role="presentation"
+              width="600"
+              cellspacing="0"
+              cellpadding="0"
+              border="0"
+              style="max-width: 600px; background-color: #ffffff"
+            >
+              <!-- Header -->
+              <tr>
+                <td
+                  class="header"
+                  style="
+                    background-color: #1e3a8a;
+                    color: #ffffff;
+                    padding: 32px 24px;
+                    text-align: center;
+                  "
+                >
+                  <h1
+                    style="
+                      margin: 0 0 8px 0;
+                      font-size: 28px;
+                      font-weight: 700;
+                      color: #ffffff;
+                    "
+                  >
+                    ROB Transportation
+                  </h1>
+                  <p style="margin: 0; font-size: 14px; color: #e5e7eb">
+                    Premium Transportation Services
+                  </p>
+                </td>
+              </tr>
+
+              <!-- Content -->
+              <tr>
+                <td class="content" style="padding: 32px 24px; color: #1f2937">
+                  <!-- Success Badge -->
+                  <div
+                    class="success-badge"
+                    style="
+                      background-color: #10b981;
+                      color: #ffffff;
+                      padding: 10px 20px;
+                      border-radius: 24px;
+                      font-size: 14px;
+                      font-weight: 600;
+                      display: inline-block;
+                      margin-bottom: 24px;
+                    "
+                  >
+                    Payment Confirmed
+                  </div>
+
+                  <h2
+                    class="section-title"
+                    style="
+                      font-size: 20px;
+                      font-weight: 700;
+                      color: #1f2937;
+                      margin: 0 0 16px 0;
+                      text-align: center;
+                    "
+                  >
+                    Thank You, John Smith!
+                  </h2>
+
+                  <p
+                    style="margin: 0 0 16px 0; color: #4b5563; line-height: 1.6"
+                  >
+                    Your payment has been successfully processed. We're excited
+                    to provide you with exceptional transportation service!
+                  </p>
+
+                  <!-- Payment Amount Box -->
+                  <table
+                    role="presentation"
+                    width="100%"
+                    cellspacing="0"
+                    cellpadding="0"
+                    border="0"
+                  >
+                    <tr>
+                      <td
+                        class="payment-box"
+                        style="
+                          background: #1e3a8a;
+                          border-radius: 12px;
+                          padding: 24px;
+                          margin: 24px 0;
+                          color: #ffffff;
+                          text-align: center;
+                        "
+                      >
+                        <p
+                          style="
+                            margin: 0 0 4px 0;
+                            font-size: 14px;
+                            color: #e5e7eb;
+                            font-weight: 600;
+                          "
+                        >
+                          AMOUNT PAID
+                        </p>
+                        <p
+                          class="amount"
+                          style="
+                            font-size: 32px;
+                            font-weight: 700;
+                            margin: 0 0 12px 0;
+                            color: #ffffff;
+                          "
+                        >
+                          $125.00
+                        </p>
+                        <p
+                          class="payment-id"
+                          style="
+                            font-size: 15px;
+                            color: #ffffff;
+                            font-family: 'Courier New', monospace;
+                            font-weight: 500;
+                            margin: 0;
+                          "
+                        >
+                          Payment ID: pi_3QXbT9KLqP2eLMJX1a2b3c4d
+                        </p>
+                      </td>
+                    </tr>
+                  </table>
+
+                  <!-- Booking Summary -->
+                  <h3
+                    class="section-title"
+                    style="
+                      font-size: 18px;
+                      font-weight: 700;
+                      color: #1f2937;
+                      margin: 24px 0 16px 0;
+                    "
+                  >
+                    Booking Details
+                  </h3>
+
+                  <div
+                    class="booking-summary"
+                    style="
+                      background-color: #f9fafb;
+                      border-radius: 8px;
+                      padding: 20px;
+                      margin: 24px 0;
+                      border: 1px solid #e5e7eb;
+                    "
+                  >
+                    <div
+                      class="detail-row"
+                      style="
+                        display: table;
+                        width: 100%;
+                        padding: 12px 0;
+                        border-bottom: 1px solid #e5e7eb;
+                      "
+                    >
+                      <span
+                        class="detail-label"
+                        style="
+                          font-weight: 600;
+                          color: #6b7280;
+                          display: table-cell;
+                          width: 40%;
+                        "
+                        >Booking ID</span
+                      >
+                      <span
+                        class="detail-value"
+                        style="
+                          color: #1f2937;
+                          display: table-cell;
+                          text-align: right;
+                          font-family: monospace;
+                          font-weight: 600;
+                        "
+                        >20250109-SMI-0001</span
+                      >
+                    </div>
+
+                    <div
+                      class="detail-row"
+                      style="
+                        display: table;
+                        width: 100%;
+                        padding: 12px 0;
+                        border-bottom: 1px solid #e5e7eb;
+                      "
+                    >
+                      <span
+                        class="detail-label"
+                        style="
+                          font-weight: 600;
+                          color: #6b7280;
+                          display: table-cell;
+                          width: 40%;
+                        "
+                        >Service</span
+                      >
+                      <span
+                        class="detail-value"
+                        style="
+                          color: #1f2937;
+                          display: table-cell;
+                          text-align: right;
+                        "
+                        >Premium SUV</span
+                      >
+                    </div>
+
+                    <div
+                      class="detail-row"
+                      style="
+                        display: table;
+                        width: 100%;
+                        padding: 12px 0;
+                        border-bottom: 1px solid #e5e7eb;
+                      "
+                    >
+                      <span
+                        class="detail-label"
+                        style="
+                          font-weight: 600;
+                          color: #6b7280;
+                          display: table-cell;
+                          width: 40%;
+                          vertical-align: top;
+                        "
+                        >Pickup</span
+                      >
+                      <span
+                        class="detail-value"
+                        style="
+                          color: #1f2937;
+                          display: table-cell;
+                          text-align: right;
+                          vertical-align: top;
+                        "
+                        >Seattle-Tacoma International Airport (SEA)</span
+                      >
+                    </div>
+
+                    <div
+                      class="detail-row"
+                      style="
+                        display: table;
+                        width: 100%;
+                        padding: 12px 0;
+                        border-bottom: 1px solid #e5e7eb;
+                      "
+                    >
+                      <span
+                        class="detail-label"
+                        style="
+                          font-weight: 600;
+                          color: #6b7280;
+                          display: table-cell;
+                          width: 40%;
+                          vertical-align: top;
+                        "
+                        >Drop-off</span
+                      >
+                      <span
+                        class="detail-value"
+                        style="
+                          color: #1f2937;
+                          display: table-cell;
+                          text-align: right;
+                          vertical-align: top;
+                        "
+                        >1234 Downtown Seattle, WA 98101</span
+                      >
+                    </div>
+
+                    <div
+                      class="detail-row"
+                      style="
+                        display: table;
+                        width: 100%;
+                        padding: 12px 0;
+                        border-bottom: 1px solid #e5e7eb;
+                      "
+                    >
+                      <span
+                        class="detail-label"
+                        style="
+                          font-weight: 600;
+                          color: #6b7280;
+                          display: table-cell;
+                          width: 40%;
+                        "
+                        >Date & Time</span
+                      >
+                      <span
+                        class="detail-value"
+                        style="
+                          color: #1f2937;
+                          display: table-cell;
+                          text-align: right;
+                        "
+                        >Saturday, January 11, 2025 at 3:30 PM PST</span
+                      >
+                    </div>
+
+                    <div
+                      class="detail-row"
+                      style="
+                        display: table;
+                        width: 100%;
+                        padding: 12px 0;
+                        border-bottom: 1px solid #e5e7eb;
+                      "
+                    >
+                      <span
+                        class="detail-label"
+                        style="
+                          font-weight: 600;
+                          color: #6b7280;
+                          display: table-cell;
+                          width: 40%;
+                        "
+                        >Passengers</span
+                      >
+                      <span
+                        class="detail-value"
+                        style="
+                          color: #1f2937;
+                          display: table-cell;
+                          text-align: right;
+                        "
+                        >4</span
+                      >
+                    </div>
+
+                    <div
+                      class="detail-row"
+                      style="display: table; width: 100%; padding: 12px 0"
+                    >
+                      <span
+                        class="detail-label"
+                        style="
+                          font-weight: 600;
+                          color: #6b7280;
+                          display: table-cell;
+                          width: 40%;
+                          vertical-align: top;
+                        "
+                        >Notes</span
+                      >
+                      <span
+                        class="detail-value"
+                        style="
+                          color: #1f2937;
+                          display: table-cell;
+                          text-align: right;
+                          vertical-align: top;
+                          white-space: pre-wrap;
+                        "
+                        >Flight arrives at 3:00 PM. Will meet at arrivals.</span
+                      >
+                    </div>
+                  </div>
+
+                  <!-- Contact Info -->
+                  <div
+                    style="
+                      margin-top: 32px;
+                      padding: 20px;
+                      background-color: #fef3c7;
+                      border-left: 4px solid #fbbf24;
+                      border-radius: 4px;
+                    "
+                  >
+                    <p
+                      style="
+                        margin: 0 0 8px 0;
+                        font-weight: 600;
+                        color: #92400e;
+                      "
+                    >
+                      Need Help?
+                    </p>
+                    <p
+                      style="
+                        margin: 0;
+                        color: #78350f;
+                        font-size: 14px;
+                        line-height: 1.5;
+                      "
+                    >
+                      If you have any questions or need to modify your booking,
+                      please contact us at least 2 hours before your scheduled
+                      pickup time.
+                    </p>
+                  </div>
+
+                  <p
+                    style="
+                      margin-top: 24px;
+                      color: #6b7280;
+                      font-size: 14px;
+                      line-height: 1.6;
+                    "
+                  >
+                    We look forward to serving you and ensuring you have a
+                    comfortable, safe journey!
+                  </p>
+                </td>
+              </tr>
+
+              <!-- Footer -->
+              <tr>
+                <td
+                  class="footer"
+                  style="
+                    background-color: #f9fafb;
+                    padding: 32px 24px;
+                    text-align: center;
+                    color: #6b7280;
+                    font-size: 14px;
+                  "
+                >
+                  <p
+                    style="margin: 0 0 16px 0; font-weight: 600; color: #1f2937"
+                  >
+                    ROB Transportation
+                  </p>
+
+                  <div class="footer-links" style="margin: 16px 0">
+                    <a
+                      href="https://robtransportation.com"
+                      style="
+                        color: #1e3a8a;
+                        text-decoration: none;
+                        margin: 0 12px;
+                      "
+                      >Website</a
+                    >
+                    <a
+                      href="mailto:info@robtransportation.com"
+                      style="
+                        color: #1e3a8a;
+                        text-decoration: none;
+                        margin: 0 12px;
+                      "
+                      >Contact</a
+                    >
+                    <a
+                      href="tel:+1234567890"
+                      style="
+                        color: #1e3a8a;
+                        text-decoration: none;
+                        margin: 0 12px;
+                      "
+                      >Call Us</a
+                    >
+                  </div>
+
+                  <div class="social-links" style="margin: 16px 0">
+                    <a
+                      href="#"
+                      style="
+                        display: inline-block;
+                        margin: 0 8px;
+                        color: #6b7280;
+                        text-decoration: none;
+                      "
+                      >Facebook</a
+                    >
+                    <a
+                      href="#"
+                      style="
+                        display: inline-block;
+                        margin: 0 8px;
+                        color: #6b7280;
+                        text-decoration: none;
+                      "
+                      >Twitter</a
+                    >
+                    <a
+                      href="#"
+                      style="
+                        display: inline-block;
+                        margin: 0 8px;
+                        color: #6b7280;
+                        text-decoration: none;
+                      "
+                      >Instagram</a
+                    >
+                  </div>
+
+                  <p
+                    style="margin: 16px 0 0 0; font-size: 12px; color: #9ca3af"
+                  >
+                    This is an automated receipt. Please save this email for
+                    your records.<br />
+                    © 2025 ROB Transportation. All rights reserved.
+                  </p>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+    </div>
+  </body>
+</html>

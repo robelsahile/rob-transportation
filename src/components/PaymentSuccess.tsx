@@ -43,18 +43,53 @@ export default function PaymentSuccess({
 
   // Rehydrate details for display
   useEffect(() => {
-    try {
-      const ctx = JSON.parse(localStorage.getItem("rt_last_payment") || "null");
-      if (ctx?.bookingId) setBookingId(ctx.bookingId);
-      const key = ctx?.bookingId ? `rt_pending_${ctx.bookingId}` : null;
-      if (key) {
-        const pending = JSON.parse(localStorage.getItem(key) || "null");
-        if (pending?.details) setBooking(pending.details);
-        if (pending?.pricing) setPricing(pending.pricing);
+    const loadBookingData = async () => {
+      try {
+        const ctx = JSON.parse(localStorage.getItem("rt_last_payment") || "null");
+        if (ctx?.bookingId) {
+          setBookingId(ctx.bookingId);
+          const key = `rt_pending_${ctx.bookingId}`;
+          const pending = JSON.parse(localStorage.getItem(key) || "null");
+          if (pending?.details) {
+            setBooking(pending.details);
+            if (pending?.pricing) setPricing(pending.pricing);
+            return; // Successfully loaded from localStorage
+          }
+          
+          // If localStorage data is not available, fetch from database
+          console.log("LocalStorage data not found, fetching from database...");
+          const response = await fetch(`/api/get-booking?bookingId=${encodeURIComponent(ctx.bookingId)}`);
+          if (response.ok) {
+            const result = await response.json();
+            if (result.success && result.booking) {
+              const dbBooking = result.booking;
+              // Transform database booking to BookingFormData format
+              const bookingData: BookingFormData = {
+                pickupLocation: dbBooking.pickupLocation,
+                dropoffLocation: dbBooking.dropoffLocation,
+                dateTime: dbBooking.dateTime,
+                vehicleType: dbBooking.vehicleType,
+                name: dbBooking.name,
+                phone: dbBooking.phone,
+                email: dbBooking.email,
+                flightNumber: dbBooking.flightNumber || "",
+                passengers: dbBooking.passengers,
+                notes: dbBooking.notes || ""
+              };
+              setBooking(bookingData);
+              if (dbBooking.pricing) setPricing(dbBooking.pricing);
+              console.log("Successfully loaded booking data from database");
+              return;
+            }
+          }
+          console.error("Failed to fetch booking data from database");
+        }
+      } catch (error) {
+        console.error("Error loading booking data:", error);
       }
-    } catch {
-      // If no payment data is found (e.g., after refresh), create a minimal booking display
-      // This ensures customers stay on the success page even after refresh
+      
+      // Fallback: create minimal booking display only if we can't get real data
+      console.log("Creating fallback booking display");
       setBooking({
         pickupLocation: "Payment completed successfully",
         dropoffLocation: "Thank you for your business!",
@@ -65,7 +100,9 @@ export default function PaymentSuccess({
         email: "",
         flightNumber: ""
       });
-    }
+    };
+
+    loadBookingData();
   }, []);
 
   // Automatically send receipt when component loads with all required data
