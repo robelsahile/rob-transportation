@@ -150,22 +150,14 @@ export default function PaymentSuccess({
 
   // Additional effect to ensure receipt is sent immediately when paymentId is available
   useEffect(() => {
-    if (paymentId && bookingId && booking && !receiptStatus.sending && !receiptStatus.sent) {
+    if (paymentId && bookingId && booking && !receiptStatus.sending && !receiptStatus.sent && !receiptStatus.error) {
       console.log("Payment ID detected, attempting immediate receipt sending");
-      // Small delay to ensure all data is ready, then try multiple times
+      // Small delay to ensure all data is ready
       setTimeout(() => {
         sendReceipt();
       }, 1000);
-      
-      // Retry after 3 seconds if first attempt fails
-      setTimeout(() => {
-        if (!receiptStatus.sent && !receiptStatus.sending) {
-          console.log("Retrying receipt sending after initial attempt");
-          sendReceipt();
-        }
-      }, 4000);
     }
-  }, [paymentId]);
+  }, [paymentId, bookingId, booking, receiptStatus.sending, receiptStatus.sent, receiptStatus.error]);
 
   const totalDisplay = useMemo(() => {
     if (!pricing?.total || !pricing?.currency) return "";
@@ -224,6 +216,12 @@ export default function PaymentSuccess({
       return;
     }
 
+    // Don't send if already sent or currently sending
+    if (receiptStatus.sent || receiptStatus.sending) {
+      console.log("Receipt already sent or currently sending, skipping");
+      return;
+    }
+
     // Validate that we have all the required booking data
     if (!booking.name || !booking.email || !booking.pickupLocation || !booking.dropoffLocation) {
       console.error("Missing required booking data for email:", {
@@ -236,6 +234,7 @@ export default function PaymentSuccess({
       return;
     }
 
+    console.log("Starting receipt sending process...");
     setReceiptStatus({ sending: true, sent: false, error: null });
 
     try {
@@ -265,17 +264,18 @@ export default function PaymentSuccess({
       });
 
       const result = await res.json();
+      console.log("Receipt API response:", result);
 
       if (res.ok && result.success) {
         setReceiptStatus({ sending: false, sent: true, error: null });
-        console.log("Receipt sent successfully:", result);
+        console.log("✅ Receipt sent successfully:", result);
       } else {
         throw new Error(result.error || "Failed to send receipt");
       }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Failed to send receipt";
       setReceiptStatus({ sending: false, sent: false, error: errorMessage });
-      console.error("Receipt sending failed:", error);
+      console.error("❌ Receipt sending failed:", error);
     }
   }
 
