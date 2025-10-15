@@ -30,11 +30,9 @@ interface ReceiptData {
 
 interface ReceiptResponse {
   success: boolean;
-  emailSent?: boolean;
-  smsSent?: boolean;
-  emailMessageId?: string;
-  smsMessageId?: string;
-  errors?: string[];
+  emailSent: boolean;
+  smsSent: boolean;
+  error: string | null;
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -48,7 +46,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader("Access-Control-Allow-Origin", "*");
 
   if (req.method !== "POST") {
-    return res.status(405).json({ error: "Method not allowed" });
+    return res.status(405).json({ 
+      success: false, 
+      emailSent: false, 
+      smsSent: false, 
+      error: "Method Not Allowed" 
+    });
   }
 
   try {
@@ -69,92 +72,56 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         customerEmail: !!data.customerEmail,
         customerPhone: !!data.customerPhone
       });
-      return res.status(400).json({ error: "Missing required fields" });
-    }
-
-    const response: ReceiptResponse = {
-      success: true,
-      emailSent: false,
-      smsSent: false,
-      errors: []
-    };
-
-    // Send email if email is provided
-    if (data.customerEmail) {
-      try {
-        // Import and call the email function directly instead of using fetch
-        const { sendEmailReceipt } = await import('./send-receipt-email');
-        const emailResult = await sendEmailReceipt(data);
-        
-        if (emailResult.success) {
-          response.emailSent = true;
-          response.emailMessageId = emailResult.messageId;
-          console.log("Email sent successfully:", emailResult.messageId);
-        } else {
-          response.errors?.push(`Email failed: ${emailResult.error}`);
-          console.error("Email sending failed:", emailResult.error);
-        }
-      } catch (error) {
-        const errorMsg = error instanceof Error ? error.message : "Unknown email error";
-        response.errors?.push(`Email error: ${errorMsg}`);
-        console.error("Email sending error:", error);
-      }
-    }
-
-    // Send SMS if phone is provided (optional - don't fail overall if SMS fails)
-    if (data.customerPhone) {
-      try {
-        // Import and call the SMS function directly instead of using fetch
-        const { sendSMSReceipt } = await import('./send-receipt-sms');
-        const smsResult = await sendSMSReceipt(data);
-        
-        if (smsResult.success) {
-          response.smsSent = true;
-          response.smsMessageId = smsResult.messageId;
-          console.log("SMS sent successfully:", smsResult.messageId);
-        } else {
-          // SMS failure is not critical - just log it but don't add to errors
-          console.warn("SMS sending failed (non-critical):", smsResult.error);
-          // Only add to errors if it's a critical configuration issue
-          if (smsResult.error?.includes("not configured")) {
-            response.errors?.push(`SMS not configured: ${smsResult.error}`);
-          }
-        }
-      } catch (error) {
-        const errorMsg = error instanceof Error ? error.message : "Unknown SMS error";
-        console.warn("SMS sending error (non-critical):", errorMsg);
-        // Don't add SMS errors to critical errors list
-      }
-    }
-
-    // Determine overall success - consider it successful if email OR SMS is sent
-    response.success = Boolean(response.emailSent || response.smsSent);
-
-    if (!response.success) {
-      console.error("Failed to send any receipts:", response.errors);
-      return res.status(500).json({
-        success: false,
-        error: "Failed to send any receipts",
-        details: response.errors
+      return res.status(400).json({ 
+        success: false, 
+        emailSent: false, 
+        smsSent: false, 
+        error: "Missing required fields" 
       });
     }
 
-    // Log successful receipt sending
-    console.log("✅ Receipt sent successfully:", {
-      emailSent: response.emailSent,
-      smsSent: response.smsSent,
-      errors: response.errors,
-      customerEmail: data.customerEmail,
-      customerPhone: data.customerPhone
-    });
+    let emailSent = false;
+    let smsSent = false;
+    let lastError: string | null = null;
 
-    return res.status(200).json(response);
+    // Send email if email is provided
+    try {
+      const { sendEmailReceipt } = await import('./send-receipt-email');
+      emailSent = await sendEmailReceipt(data);
+    } catch (e: any) {
+      lastError = e?.message || 'Email send failed';
+    }
+
+    // Send SMS if phone is provided (optional - don't fail overall if SMS fails)
+    try {
+      if (data.customerPhone) {
+        const { sendSMSReceipt } = await import('./send-receipt-sms');
+        smsSent = await sendSMSReceipt(data);
+      }
+    } catch (e: any) {
+      lastError = e?.message || 'SMS send failed';
+    }
+
+    // Determine overall success - consider it successful if email OR SMS is sent
+    const success = !!(emailSent || smsSent);
+
+    // Log the final API JSON response for debugging
+    console.log("🔍 Final API JSON:", { success, emailSent, smsSent, error: success ? null : (lastError || 'Failed to send any receipts') });
+    
+    return res.status(success ? 200 : 500).json({
+      success,
+      emailSent,
+      smsSent,
+      error: success ? null : (lastError || 'Failed to send any receipts')
+    });
 
   } catch (error) {
     console.error("Failed to send receipts:", error);
     return res.status(500).json({ 
-      error: "Failed to send receipts",
-      details: error instanceof Error ? error.message : "Unknown error"
+      success: false,
+      emailSent: false,
+      smsSent: false,
+      error: "Failed to send receipts"
     });
   }
 }

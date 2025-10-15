@@ -88,26 +88,18 @@ export async function sendSMSReceipt(data: ReceiptData) {
     console.warn("⚠️ Twilio credentials not configured - simulating SMS send in development");
     // In development, simulate successful SMS sending
     if (process.env.NODE_ENV === "development" || !process.env.NODE_ENV) {
-      return { 
-        success: true, 
-        messageId: "dev_simulated_sms_" + Date.now(),
-        message: "SMS simulated in development (Twilio credentials not configured)" 
-      };
+      return true;
     }
-    return { success: false, error: "SMS service not configured" };
+    return false;
   }
 
   if (!process.env.TWILIO_PHONE_NUMBER) {
     console.warn("⚠️ TWILIO_PHONE_NUMBER not configured - simulating SMS send in development");
     // In development, simulate successful SMS sending
     if (process.env.NODE_ENV === "development" || !process.env.NODE_ENV) {
-      return { 
-        success: true, 
-        messageId: "dev_simulated_sms_" + Date.now(),
-        message: "SMS simulated in development (TWILIO_PHONE_NUMBER not configured)" 
-      };
+      return true;
     }
-    return { success: false, error: "SMS service not configured" };
+    return false;
   }
 
   try {
@@ -135,23 +127,15 @@ export async function sendSMSReceipt(data: ReceiptData) {
 
     if (!response.ok) {
       console.error("Twilio API error:", result);
-      return { success: false, error: `Twilio API error: ${result.message || "Unknown error"}` };
+      return false;
     }
 
     console.log("SMS sent successfully:", result.sid);
 
-    return {
-      success: true,
-      messageId: result.sid,
-      message: "SMS receipt sent successfully",
-    };
+    return true;
   } catch (error) {
     console.error("Failed to send SMS receipt:", error);
-    return {
-      success: false,
-      error: "Failed to send SMS receipt",
-      details: error instanceof Error ? error.message : "Unknown error",
-    };
+    return false;
   }
 }
 

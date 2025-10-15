@@ -69,6 +69,19 @@ function generateEmailHTML(data: ReceiptData): string {
     return value.trim();
   };
 
+  // Extract and format the key data for the template
+  const {
+    bookingId,
+    pickupLocation,
+    dropoffLocation,
+    dateTime,
+    vehicleName,
+    vehicleType
+  } = data;
+
+  const serviceLabel = vehicleName || vehicleType || 'Selected Vehicle';
+  const dateLabel = dateTime ? new Date(dateTime).toLocaleString() : '';
+
   return `
 <!DOCTYPE html>
 <html>
@@ -123,22 +136,22 @@ function generateEmailHTML(data: ReceiptData): string {
         
         <div class="detail-row">
           <span class="detail-label">Service</span>
-          <span class="detail-value">${safeDisplay(vehicleDisplayName, "Selected Vehicle")}</span>
+          <span class="detail-value">${serviceLabel}</span>
         </div>
         
         <div class="detail-row">
           <span class="detail-label">Pickup</span>
-          <span class="detail-value">${safeDisplay(data.pickupLocation)}</span>
+          <span class="detail-value">${safeDisplay(pickupLocation)}</span>
         </div>
         
         <div class="detail-row">
           <span class="detail-label">Drop-off</span>
-          <span class="detail-value">${safeDisplay(data.dropoffLocation)}</span>
+          <span class="detail-value">${safeDisplay(dropoffLocation)}</span>
         </div>
         
         <div class="detail-row">
           <span class="detail-label">Date & Time</span>
-          <span class="detail-value">${safeDisplay(formattedDateTime)}</span>
+          <span class="detail-value">${dateLabel || "N/A"}</span>
         </div>
         
         <div class="detail-row">
@@ -251,17 +264,31 @@ export async function sendEmailReceipt(data: ReceiptData) {
     hasResendKey: !!process.env.RESEND_API_KEY
   });
 
+  // Log payload keys for debugging (avoid logging PII values)
+  console.log("🔍 Email template payload keys:", {
+    bookingId: !!data.bookingId,
+    customerName: !!data.customerName,
+    customerEmail: !!data.customerEmail,
+    customerPhone: !!data.customerPhone,
+    pickupLocation: !!data.pickupLocation,
+    dropoffLocation: !!data.dropoffLocation,
+    dateTime: !!data.dateTime,
+    vehicleType: !!data.vehicleType,
+    vehicleName: !!data.vehicleName,
+    flightNumber: !!data.flightNumber,
+    passengers: !!data.passengers,
+    notes: !!data.notes,
+    pricing: !!data.pricing,
+    paymentId: !!data.paymentId
+  });
+
   if (!process.env.RESEND_API_KEY) {
     console.warn("⚠️ RESEND_API_KEY not configured - simulating email send in development");
     // In development, simulate successful email sending
     if (process.env.NODE_ENV === "development" || !process.env.NODE_ENV) {
-      return { 
-        success: true, 
-        messageId: "dev_simulated_" + Date.now(),
-        message: "Email simulated in development (RESEND_API_KEY not configured)" 
-      };
+      return true;
     }
-    return { success: false, error: "Email service not configured" };
+    return false;
   }
 
   try {
@@ -272,7 +299,7 @@ export async function sendEmailReceipt(data: ReceiptData) {
         bookingId: !!data.bookingId,
         customerName: !!data.customerName
       });
-      return { success: false, error: "Missing required fields" };
+      return false;
     }
 
     const emailHtml = generateEmailHTML(data);
@@ -287,11 +314,7 @@ export async function sendEmailReceipt(data: ReceiptData) {
     console.log("✅ Email sent successfully:", result.data?.id);
     console.log("✅ Full Resend result:", result);
 
-    return { 
-      success: true, 
-      messageId: result.data?.id,
-      message: "Receipt email sent successfully" 
-    };
+    return true;
 
   } catch (error) {
     console.error("❌ Failed to send receipt email:", error);
@@ -299,11 +322,7 @@ export async function sendEmailReceipt(data: ReceiptData) {
       message: error instanceof Error ? error.message : "Unknown error",
       stack: error instanceof Error ? error.stack : undefined
     });
-    return { 
-      success: false,
-      error: "Failed to send receipt email",
-      details: error instanceof Error ? error.message : "Unknown error"
-    };
+    return false;
   }
 }
 
