@@ -67,6 +67,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       customerPhone: data.customerPhone,
       hasPricing: !!data.pricing
     });
+    
+    console.log("🔍 Full request body:", JSON.stringify(data, null, 2));
 
     // Validate required fields
     if (!data.bookingId || !data.customerName || (!data.customerEmail && !data.customerPhone)) {
@@ -90,9 +92,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // Send email if email is provided
     try {
+      console.log("🔍 Attempting to send email with data:", {
+        customerEmail: data.customerEmail,
+        bookingId: data.bookingId,
+        customerName: data.customerName
+      });
       emailSent = await sendEmailReceipt(data);
+      console.log("🔍 Email send result:", emailSent);
     } catch (e: any) {
-      console.error('Email send failed:', e);
+      console.error('❌ Email send failed:', e);
+      console.error('❌ Email error details:', {
+        message: e?.message,
+        stack: e?.stack,
+        name: e?.name
+      });
       lastError = e?.message || 'Email send failed';
     }
 

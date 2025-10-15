@@ -311,12 +311,24 @@ export async function sendEmailReceipt(data: ReceiptData) {
   }
 
   try {
-    // Validate required fields
+    // Validate required fields with detailed logging
+    console.log("🔍 Email validation - checking fields:", {
+      customerEmail: data.customerEmail,
+      bookingId: data.bookingId,
+      customerName: data.customerName,
+      customerEmailType: typeof data.customerEmail,
+      bookingIdType: typeof data.bookingId,
+      customerNameType: typeof data.customerName
+    });
+
     if (!data.customerEmail || !data.bookingId || !data.customerName) {
       console.error("❌ Missing required fields for email:", {
-        customerEmail: !!data.customerEmail,
-        bookingId: !!data.bookingId,
-        customerName: !!data.customerName
+        customerEmail: data.customerEmail,
+        bookingId: data.bookingId,
+        customerName: data.customerName,
+        customerEmailEmpty: !data.customerEmail,
+        bookingIdEmpty: !data.bookingId,
+        customerNameEmpty: !data.customerName
       });
       return false;
     }
