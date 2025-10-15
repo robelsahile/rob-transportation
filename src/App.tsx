@@ -409,20 +409,6 @@ export default function App() {
       setPaymentId(pid);
       const pricing = (window as any)?.__lastPricing;
       
-      // Save booking data for email
-      const bookingData = {
-        id: bookingId,
-        name: bookingDetails.name,
-        email: bookingDetails.email,
-        phone: bookingDetails.phone,
-        pickupLocation: bookingDetails.pickupLocation,
-        dropoffLocation: bookingDetails.dropoffLocation,
-        dateTime: bookingDetails.dateTime,
-        vehicleType: bookingDetails.vehicleType,
-        flightNumber: bookingDetails.flightNumber,
-        pricing: pricing
-      };
-
       // Email sending is handled by PaymentSuccess component
 
       postBookingToApi(pricing ?? null, true);     // confirmed save after payment
