@@ -423,27 +423,7 @@ export default function App() {
         pricing: pricing
       };
 
-      // Send confirmation email
-      try {
-        console.log("Sending confirmation email for booking:", bookingId);
-        const emailResponse = await fetch('/api/send-receipt-email', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            ...bookingData,
-            paymentId: pid
-          })
-        });
-        
-        if (emailResponse.ok) {
-          console.log("Confirmation email sent successfully");
-        } else {
-          const errorText = await emailResponse.text();
-          console.error("Failed to send confirmation email:", errorText);
-        }
-      } catch (error) {
-        console.error("Error sending confirmation email:", error);
-      }
+      // Email sending is handled by PaymentSuccess component
 
       postBookingToApi(pricing ?? null, true);     // confirmed save after payment
       if (pricing) handleSaveBooking(pricing);
@@ -516,29 +496,7 @@ export default function App() {
               console.error("Error saving booking to admin dashboard:", adminError);
             }
             
-            // Send confirmation email
-            try {
-              console.log("Sending confirmation email for booking:", pendingId);
-              await fetch('/api/send-receipt-email', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  bookingId: pendingId,
-                  customerName: pending.details.name,
-                  customerEmail: pending.details.email,
-                  customerPhone: pending.details.phone,
-                  pickupLocation: pending.details.pickupLocation,
-                  dropoffLocation: pending.details.dropoffLocation,
-                  dateTime: pending.details.dateTime,
-                  vehicleType: pending.details.vehicleType,
-                  flightNumber: pending.details.flightNumber,
-                  pricing: pending.pricing,
-                  paymentId: paymentIntentId
-                })
-              });
-            } catch (emailError) {
-              console.error("Error sending confirmation email:", emailError);
-            }
+            // Email sending is handled by PaymentSuccess component
             
             postBookingToApi(pending.pricing ?? null, true);
             if (pending.pricing) handleSaveBooking(pending.pricing);
