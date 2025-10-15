@@ -86,20 +86,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // Send email if email is provided
     try {
-      const { sendEmailReceipt } = await import('./send-receipt-email');
-      emailSent = await sendEmailReceipt(data);
+      const emailModule = await import('./send-receipt-email');
+      emailSent = await emailModule.sendEmailReceipt(data);
     } catch (e: any) {
+      console.error('Email import/send failed:', e);
       lastError = e?.message || 'Email send failed';
     }
 
     // Send SMS if phone is provided (optional - don't fail overall if SMS fails)
     try {
       if (data.customerPhone) {
-        const { sendSMSReceipt } = await import('./send-receipt-sms');
-        smsSent = await sendSMSReceipt(data);
+        const smsModule = await import('./send-receipt-sms');
+        smsSent = await smsModule.sendSMSReceipt(data);
       }
     } catch (e: any) {
-      lastError = e?.message || 'SMS send failed';
+      console.error('SMS import/send failed:', e);
+      // SMS failures are non-critical - only set error if email also failed
+      if (!emailSent && !smsSent) {
+        lastError = e?.message || 'Failed to send any receipts';
+      }
     }
 
     // Determine overall success - consider it successful if email OR SMS is sent

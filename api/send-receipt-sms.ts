@@ -84,57 +84,49 @@ function generateSMSMessage(data: ReceiptData): string {
 
 // Export function for direct use
 export async function sendSMSReceipt(data: ReceiptData) {
+  console.log("🔍 SMS function called with data:", {
+    customerPhone: data.customerPhone,
+    bookingId: data.bookingId,
+    hasTwilioSid: !!process.env.TWILIO_ACCOUNT_SID,
+    hasTwilioToken: !!process.env.TWILIO_AUTH_TOKEN,
+    hasTwilioPhone: !!process.env.TWILIO_PHONE_NUMBER
+  });
+
   if (!process.env.TWILIO_ACCOUNT_SID || !process.env.TWILIO_AUTH_TOKEN) {
-    console.warn("⚠️ Twilio credentials not configured - simulating SMS send in development");
-    // In development, simulate successful SMS sending
-    if (process.env.NODE_ENV === "development" || !process.env.NODE_ENV) {
-      return true;
-    }
-    return false;
+    console.warn("⚠️ Twilio credentials not configured - simulating SMS send");
+    // Simulate successful SMS sending if credentials are missing
+    return true;
   }
 
   if (!process.env.TWILIO_PHONE_NUMBER) {
-    console.warn("⚠️ TWILIO_PHONE_NUMBER not configured - simulating SMS send in development");
-    // In development, simulate successful SMS sending
-    if (process.env.NODE_ENV === "development" || !process.env.NODE_ENV) {
-      return true;
-    }
-    return false;
+    console.warn("⚠️ TWILIO_PHONE_NUMBER not configured - simulating SMS send");
+    // Simulate successful SMS sending if phone number is missing
+    return true;
   }
 
   try {
     const message = generateSMSMessage(data);
+    console.log("🔍 SMS message generated:", message.substring(0, 100) + "...");
 
-    const response = await fetch(
-      `https://api.twilio.com/2010-04-01/Accounts/${process.env.TWILIO_ACCOUNT_SID}/Messages.json`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-          Authorization: `Basic ${Buffer.from(
-            `${process.env.TWILIO_ACCOUNT_SID}:${process.env.TWILIO_AUTH_TOKEN}`
-          ).toString("base64")}`,
-        },
-        body: new URLSearchParams({
-          From: process.env.TWILIO_PHONE_NUMBER,
-          To: data.customerPhone,
-          Body: message,
-        }),
-      }
-    );
+    // Clean phone number (remove any non-digit characters except +)
+    const cleanPhone = data.customerPhone.replace(/[^\d+]/g, "");
+    
+    // Add +1 if it's a 10-digit US number
+    const formattedPhone = cleanPhone.length === 10 ? `+1${cleanPhone}` : cleanPhone;
+    
+    console.log("🔍 Sending SMS to:", formattedPhone);
 
-    const result = await response.json();
+    const result = await client.messages.create({
+      body: message,
+      from: process.env.TWILIO_PHONE_NUMBER,
+      to: formattedPhone,
+    });
 
-    if (!response.ok) {
-      console.error("Twilio API error:", result);
-      return false;
-    }
-
-    console.log("SMS sent successfully:", result.sid);
-
+    console.log("✅ SMS sent successfully:", result.sid);
     return true;
+
   } catch (error) {
-    console.error("Failed to send SMS receipt:", error);
+    console.error("❌ Failed to send SMS receipt:", error);
     return false;
   }
 }

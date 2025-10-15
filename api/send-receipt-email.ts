@@ -65,8 +65,10 @@ function generateEmailHTML(data: ReceiptData): string {
   
   // Helper function to safely display values
   const safeDisplay = (value: string | undefined | null, fallback: string = "N/A"): string => {
-    if (!value || value.trim() === "") return fallback;
-    return value.trim();
+    if (!value) return fallback;
+    const trimmed = value.trim();
+    if (trimmed === "" || trimmed === "undefined" || trimmed === "null") return fallback;
+    return trimmed;
   };
 
   // Extract and format the key data for the template
@@ -81,6 +83,14 @@ function generateEmailHTML(data: ReceiptData): string {
 
   const serviceLabel = vehicleName || vehicleType || 'Selected Vehicle';
   const dateLabel = dateTime ? new Date(dateTime).toLocaleString() : '';
+
+  // Debug the template values
+  console.log("🔍 Template values:", {
+    serviceLabel,
+    pickupLocation: safeDisplay(pickupLocation),
+    dropoffLocation: safeDisplay(dropoffLocation),
+    dateLabel: dateLabel || "N/A"
+  });
 
   return `
 <!DOCTYPE html>
@@ -280,6 +290,15 @@ export async function sendEmailReceipt(data: ReceiptData) {
     notes: !!data.notes,
     pricing: !!data.pricing,
     paymentId: !!data.paymentId
+  });
+
+  // Log actual values for debugging (be careful with PII)
+  console.log("🔍 Email template actual values:", {
+    pickupLocation: data.pickupLocation ? data.pickupLocation.substring(0, 20) + '...' : 'EMPTY',
+    dropoffLocation: data.dropoffLocation ? data.dropoffLocation.substring(0, 20) + '...' : 'EMPTY',
+    dateTime: data.dateTime || 'EMPTY',
+    vehicleName: data.vehicleName || 'EMPTY',
+    vehicleType: data.vehicleType || 'EMPTY'
   });
 
   if (!process.env.RESEND_API_KEY) {
