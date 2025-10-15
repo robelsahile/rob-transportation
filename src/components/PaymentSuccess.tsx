@@ -252,10 +252,26 @@ export default function PaymentSuccess({
         body: JSON.stringify(receiptData),
       });
 
-      const result = await res.json();
-      console.log("🔍 Receipt API response:", result);
       console.log("🔍 Response status:", res.status);
       console.log("🔍 Response ok:", res.ok);
+      console.log("🔍 Response headers:", res.headers.get('content-type'));
+
+      let result;
+      try {
+        const responseText = await res.text();
+        console.log("🔍 Raw response:", responseText);
+        
+        if (res.headers.get('content-type')?.includes('application/json')) {
+          result = JSON.parse(responseText);
+        } else {
+          throw new Error(`Server returned ${res.status}: ${responseText.substring(0, 100)}`);
+        }
+      } catch (parseError) {
+        console.error("❌ Failed to parse response:", parseError);
+        throw new Error(`Server error (${res.status}): Invalid response format`);
+      }
+
+      console.log("🔍 Receipt API response:", result);
       console.log("🔍 Result success:", result.success);
 
       // Treat any channel success as a win

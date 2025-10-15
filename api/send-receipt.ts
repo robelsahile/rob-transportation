@@ -38,6 +38,8 @@ interface ReceiptResponse {
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  console.log("🔍 Receipt API handler called with method:", req.method);
+  
   // CORS / preflight
   if (req.method === "OPTIONS") {
     res.setHeader("Access-Control-Allow-Origin", "*");
@@ -121,12 +123,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
 
   } catch (error) {
-    console.error("Failed to send receipts:", error);
-    return res.status(500).json({ 
-      success: false,
-      emailSent: false,
-      smsSent: false,
-      error: "Failed to send receipts"
+    console.error("❌ Failed to send receipts:", error);
+    console.error("❌ Error details:", {
+      message: error instanceof Error ? error.message : "Unknown error",
+      stack: error instanceof Error ? error.stack : undefined,
+      name: error instanceof Error ? error.name : undefined
     });
+    
+    try {
+      return res.status(500).json({ 
+        success: false,
+        emailSent: false,
+        smsSent: false,
+        error: "Failed to send receipts"
+      });
+    } catch (responseError) {
+      console.error("❌ Failed to send error response:", responseError);
+      return res.status(500).end("Internal Server Error");
+    }
   }
 }
