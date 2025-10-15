@@ -1,5 +1,7 @@
 // /api/send-receipt.ts
 import type { VercelRequest, VercelResponse } from "@vercel/node";
+import { sendEmailReceipt } from './send-receipt-email';
+import { sendSMSReceipt } from './send-receipt-sms';
 
 interface ReceiptData {
   bookingId: string;
@@ -86,21 +88,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // Send email if email is provided
     try {
-      const emailModule = await import('./send-receipt-email');
-      emailSent = await emailModule.sendEmailReceipt(data);
+      emailSent = await sendEmailReceipt(data);
     } catch (e: any) {
-      console.error('Email import/send failed:', e);
+      console.error('Email send failed:', e);
       lastError = e?.message || 'Email send failed';
     }
 
     // Send SMS if phone is provided (optional - don't fail overall if SMS fails)
     try {
       if (data.customerPhone) {
-        const smsModule = await import('./send-receipt-sms');
-        smsSent = await smsModule.sendSMSReceipt(data);
+        smsSent = await sendSMSReceipt(data);
       }
     } catch (e: any) {
-      console.error('SMS import/send failed:', e);
+      console.error('SMS send failed:', e);
       // SMS failures are non-critical - only set error if email also failed
       if (!emailSent && !smsSent) {
         lastError = e?.message || 'Failed to send any receipts';
