@@ -410,7 +410,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
           onChange={onInputChange}
           placeholder="e.g., 2"
           min="1"
-          max="20"
+          max="100"
         />
 
         <label className="block mb-4">

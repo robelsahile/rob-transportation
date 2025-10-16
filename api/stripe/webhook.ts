@@ -696,6 +696,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         // Get booking ID from session
         const bookingId = getBookingIdFromSession(sess);
+        
+        // Extract passengers and notes from session metadata
+        const passengers = sess.metadata?.passengers ? parseInt(sess.metadata.passengers, 10) : null;
+        const notes = sess.metadata?.notes || null;
+        
+        console.log('Checkout Session metadata:', {
+          sessionId: sess.id,
+          metadata: sess.metadata,
+          extractedBookingId: bookingId,
+          passengers,
+          notes
+        });
 
         if (email && sess.amount_total) {
           await sendReceiptEmail({ 
@@ -708,11 +720,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         // Update booking status if bookingId exists
         if (bookingId) {
+          const updateData: any = { 
+            payment_status: "paid", 
+            paid_at: new Date().toISOString() 
+          };
+          
+          // Add passengers and notes if they exist in metadata
+          if (passengers !== null) {
+            updateData.passengers = passengers;
+          }
+          if (notes !== null) {
+            updateData.notes = notes;
+          }
+          
           await supabase
             .from("bookings")
-            .update({ payment_status: "paid", paid_at: new Date().toISOString() })
+            .update(updateData)
             .eq("id", bookingId);
-          console.log('Booking updated:', bookingId);
+          console.log('Booking updated:', bookingId, updateData);
         }
         break;
       }
