@@ -407,17 +407,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
           name="passengers"
           type="number"
           value={bookingDetails.passengers?.toString() || ""}
-          onChange={(e) => {
-            const value = e.target.value;
-            onInputChange({
-              ...e,
-              target: {
-                ...e.target,
-                name: "passengers",
-                value: value ? parseInt(value, 10) : undefined
-              }
-            } as any);
-          }}
+          onChange={onInputChange}
           placeholder="e.g., 2"
           min="1"
           max="20"

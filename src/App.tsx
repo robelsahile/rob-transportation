@@ -266,7 +266,14 @@ export default function App() {
   const handleInputChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
       const { name, value } = e.target;
-      setBookingDetails((prev) => ({ ...prev, [name]: value }));
+      
+      // Handle passengers field specially - convert to number or undefined
+      if (name === "passengers") {
+        const numValue = value ? parseInt(value, 10) : undefined;
+        setBookingDetails((prev) => ({ ...prev, [name]: numValue }));
+      } else {
+        setBookingDetails((prev) => ({ ...prev, [name]: value }));
+      }
     },
     []
   );
