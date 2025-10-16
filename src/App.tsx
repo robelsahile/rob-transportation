@@ -351,6 +351,8 @@ export default function App() {
         flightNumber: bookingDetails.flightNumber?.trim()
           ? bookingDetails.flightNumber
           : undefined,
+        passengers: bookingDetails.passengers,
+        notes: bookingDetails.notes,
         pricing,
       };
       setBookings((prev) => [newBooking, ...prev]);
@@ -647,6 +649,8 @@ export default function App() {
               totalAmount={lastTotal}
               customerName={`${bookingDetails.name}`.trim()}
               customerEmail={bookingDetails.email}
+              passengers={bookingDetails.passengers}
+              notes={bookingDetails.notes}
               onBack={() => setView("review")}
               onPaid={handlePaymentSuccess}
             />

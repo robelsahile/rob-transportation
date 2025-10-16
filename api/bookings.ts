@@ -226,6 +226,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           phone: r.phone,
           email: r.email,
           flightNumber: r.flight_number,
+          passengers: r.passengers ?? null,
+          notes: r.notes ?? null,
           pricing: r.pricing ?? null,
           paymentId: r.payment_id ?? null,
           paymentStatus: r.payment_status ?? null,

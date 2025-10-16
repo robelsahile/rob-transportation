@@ -641,11 +641,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         // Get booking ID from metadata
         const bookingId = pi.metadata?.booking_id || pi.metadata?.bookingId;
+        const passengers = pi.metadata?.passengers ? parseInt(pi.metadata.passengers, 10) : null;
+        const notes = pi.metadata?.notes || null;
         
         console.log('Payment Intent metadata:', {
           paymentIntentId: pi.id,
           metadata: pi.metadata,
-          extractedBookingId: bookingId
+          extractedBookingId: bookingId,
+          passengers,
+          notes
         });
 
         if (email && pi.amount_received) {
@@ -659,11 +663,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         // Update booking status if bookingId exists in metadata
         if (bookingId) {
+          const updateData: any = { 
+            payment_status: "paid", 
+            paid_at: new Date().toISOString() 
+          };
+          
+          // Add passengers and notes if they exist in metadata
+          if (passengers !== null) {
+            updateData.passengers = passengers;
+          }
+          if (notes !== null) {
+            updateData.notes = notes;
+          }
+          
           await supabase
             .from("bookings")
-            .update({ payment_status: "paid", paid_at: new Date().toISOString() })
+            .update(updateData)
             .eq("id", bookingId);
-          console.log('Booking updated:', bookingId);
+          console.log('Booking updated:', bookingId, updateData);
         }
         break;
       }

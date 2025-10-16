@@ -7,6 +7,8 @@ type CreateIntentBody = {
   customerEmail: string;
   customerName?: string;
   vehicleName?: string;
+  passengers?: number;
+  notes?: string;
 };
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -23,7 +25,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    const { amount, bookingId, customerEmail, customerName, vehicleName } = req.body as CreateIntentBody;
+    const { amount, bookingId, customerEmail, customerName, vehicleName, passengers, notes } = req.body as CreateIntentBody;
 
     if (!amount || !bookingId || !customerEmail) {
       return res.status(400).json({
@@ -44,6 +46,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         bookingId,
         customerName: customerName || "Guest",
         vehicleName: vehicleName || "Private Ride",
+        passengers: passengers ? passengers.toString() : "",
+        notes: notes || "",
       },
       description: `Booking ${bookingId} - ${vehicleName || "Private Ride"}`,
       automatic_payment_methods: {
