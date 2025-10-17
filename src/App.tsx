@@ -662,6 +662,10 @@ export default function App() {
               customerEmail={bookingDetails.email}
               passengers={bookingDetails.passengers}
               notes={bookingDetails.notes}
+              /* ✅ add these three */
+              pickupLocation={bookingDetails.pickupLocation}
+              dropoffLocation={bookingDetails.dropoffLocation}
+              dateTime={bookingDetails.dateTime}
               onBack={() => setView("review")}
               onPaid={handlePaymentSuccess}
             />

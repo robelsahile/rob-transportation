@@ -9,6 +9,10 @@ type CreateIntentBody = {
   vehicleName?: string;
   passengers?: number;
   notes?: string;
+  /* ✅ new */
+  pickupLocation?: string;
+  dropoffLocation?: string;
+  dateTime?: string; // ISO or human string is fine
 };
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -25,7 +29,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    const { amount, bookingId, customerEmail, customerName, vehicleName, passengers, notes } = req.body as CreateIntentBody;
+    const { amount, bookingId, customerEmail, customerName, vehicleName, passengers, notes, pickupLocation, dropoffLocation, dateTime } = req.body as CreateIntentBody;
 
     if (!amount || !bookingId || !customerEmail) {
       return res.status(400).json({
@@ -48,6 +52,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         vehicleName: vehicleName || "Private Ride",
         passengers: passengers ? passengers.toString() : "",
         notes: notes || "",
+        /* ✅ new — what your webhook needs if DB hasn’t written yet */
+        pickup_location: pickupLocation || "",
+        dropoff_location: dropoffLocation || "",
+        date_time: dateTime || "",
       },
       description: `Booking ${bookingId} - ${vehicleName || "Private Ride"}`,
       automatic_payment_methods: {

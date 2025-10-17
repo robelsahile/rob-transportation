@@ -10,6 +10,10 @@ type PaymentPageProps = {
   customerEmail?: string;
   passengers?: number;
   notes?: string;
+  /* ✅ new props */
+  pickupLocation?: string;
+  dropoffLocation?: string;
+  dateTime?: string;
   onBack: () => void;
   onPaid: (paymentId: string) => void;
 };
@@ -18,7 +22,7 @@ type PaymentPageProps = {
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || "");
 
 const PaymentPage: React.FC<PaymentPageProps> = (props) => {
-  const { bookingId, totalAmount, customerName, customerEmail, passengers, notes, onBack, onPaid } = props;
+  const { bookingId, totalAmount, customerName, customerEmail, passengers, notes, pickupLocation, dropoffLocation, dateTime, onBack, onPaid } = props;
 
   const [clientSecret, setClientSecret] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
@@ -49,6 +53,10 @@ const PaymentPage: React.FC<PaymentPageProps> = (props) => {
           vehicleName,
           passengers,
           notes,
+          /* ✅ forward to server */
+          pickupLocation,
+          dropoffLocation,
+          dateTime,
         };
 
         const resp = await fetch("/api/create-payment-intent", {
@@ -76,7 +84,7 @@ const PaymentPage: React.FC<PaymentPageProps> = (props) => {
         setLoading(false);
       }
     })();
-  }, [subtotalCents, bookingId, customerName, customerEmail, vehicleName]);
+  }, [subtotalCents, bookingId, customerName, customerEmail, vehicleName, pickupLocation, dropoffLocation, dateTime]);
 
   const appearance = {
     theme: "stripe" as const,
