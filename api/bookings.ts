@@ -24,6 +24,7 @@ if (!SUPABASE_URL || !SERVICE_KEY) {
 
 const supabase = createClient(SUPABASE_URL, SERVICE_KEY);
 
+// ---------- helpers ----------
 function send(res: VercelResponse, status: number, body: any) {
   res.status(status).setHeader("Content-Type", "application/json");
   res.send(JSON.stringify(body));

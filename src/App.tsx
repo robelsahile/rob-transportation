@@ -397,6 +397,8 @@ export default function App() {
           phone: bookingDetails.phone,
           email: bookingDetails.email,
           flightNumber: bookingDetails.flightNumber?.trim() || null,
+          passengers: bookingDetails.passengers ?? null,   // <-- add
+          notes: bookingDetails.notes || null,             // <-- add
           pricing,
           confirmed,
         };
@@ -471,6 +473,8 @@ export default function App() {
                 phone: pending.details.phone,
                 email: pending.details.email,
                 flightNumber: pending.details.flightNumber?.trim() || null,
+                passengers: pending.details.passengers ?? null,  // <-- add
+                notes: pending.details.notes || null,            // <-- add
                 pricing: pending.pricing || null,
                 confirmed: true,
               };

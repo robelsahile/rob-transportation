@@ -12,19 +12,19 @@ create table if not exists public.bookings (
   phone             text not null,
   email             text not null,
   flight_number     text,
+  passengers        integer,
+  notes             text,
   pricing           jsonb,
   payment_id        text,
-  payment_status    text
+  payment_status    text,
+  vehicle_selection_id text
 );
 
 -- Add payment columns used by webhook or later use (safe if run multiple times)
+-- Note: These ALTER statements are kept for backwards compatibility if table already exists
 alter table public.bookings add column if not exists payment_id text;
 alter table public.bookings add column if not exists payment_status text;
-
--- Add vehicle selection ID column (format: yyyyMMdd-xxx-nnnn)
 alter table public.bookings add column if not exists vehicle_selection_id text;
-
--- Add passengers and notes columns
 alter table public.bookings add column if not exists passengers integer;
 alter table public.bookings add column if not exists notes text;
 
