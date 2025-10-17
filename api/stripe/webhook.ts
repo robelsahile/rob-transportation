@@ -533,13 +533,14 @@ function generatePaymentConfirmationHTML({
 }
 
 // Send receipt email with proper error handling
-async function sendReceiptEmail({ email, amount, paymentIntentId, sessionId, chargeId, bookingId }: {
+async function sendReceiptEmail({ email, amount, paymentIntentId, sessionId, chargeId, bookingId, metadata }: {
   email: string;
   amount: number;
   paymentIntentId?: string;
   sessionId?: string;
   chargeId?: string;
   bookingId?: string;
+  metadata?: any;
 }): Promise<void> {
   try {
     const amountFormatted = new Intl.NumberFormat('en-US', {
@@ -551,7 +552,21 @@ async function sendReceiptEmail({ email, amount, paymentIntentId, sessionId, cha
     let booking: any = null;
     if (bookingId) {
       booking = await getBookingDetails(bookingId);
-      console.log('Booking details fetched:', booking ? 'success' : 'not found');
+      console.log('Booking details fetched from DB:', booking ? 'success' : 'not found');
+      
+      // If DB fetch failed but we have metadata, use that as fallback
+      if (!booking && metadata) {
+        console.log('Using metadata as fallback for booking details');
+        booking = {
+          pickup_location: metadata.pickup_location || 'N/A',
+          dropoff_location: metadata.dropoff_location || 'N/A',
+          date_time: metadata.date_time || 'N/A',
+          vehicle_type: metadata.vehicleName || 'Selected Vehicle',
+          name: metadata.customerName || 'Guest',
+          passengers: metadata.passengers ? parseInt(metadata.passengers, 10) : null,
+          notes: metadata.notes || null
+        };
+      }
     }
     
     // Log for debugging - this will help us see what's happening
@@ -561,6 +576,7 @@ async function sendReceiptEmail({ email, amount, paymentIntentId, sessionId, cha
       amount: amount / 100,
       paymentId: paymentIntentId || sessionId || chargeId,
       hasBooking: !!booking,
+      hasMetadata: !!metadata,
       bookingData: booking ? {
         pickup: booking.pickup_location,
         dropoff: booking.dropoff_location,
@@ -657,7 +673,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             email, 
             amount: pi.amount_received, 
             paymentIntentId: pi.id,
-            bookingId
+            bookingId,
+            metadata: pi.metadata
           });
         }
 
@@ -714,7 +731,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             email, 
             amount: sess.amount_total, 
             sessionId: sess.id,
-            bookingId
+            bookingId,
+            metadata: sess.metadata
           });
         }
 
@@ -762,7 +780,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             email, 
             amount: ch.amount, 
             chargeId: ch.id,
-            bookingId
+            bookingId,
+            metadata: ch.metadata
           });
         }
         break;
