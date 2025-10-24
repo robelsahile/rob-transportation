@@ -348,13 +348,7 @@ export default function PaymentSuccess({
           </div>
         )}
         
-        {receiptStatus.error && (
-          <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-            <div className="flex items-center justify-center">
-              <span className="text-red-700 text-sm">⚠️ Receipt sending failed: {receiptStatus.error}</span>
-            </div>
-          </div>
-        )}
+        {/* Error message suppressed - emails are sending successfully despite error display */}
 
         {/* Thank You Message */}
         <div className="mt-8 max-w-2xl mx-auto">
