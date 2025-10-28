@@ -1,4 +1,3 @@
-// v3 Pricing Engine — ROB Transportation (Third Version)
 // src/lib/pricing.ts
 
 import { VehicleType } from "../types";
@@ -8,7 +7,7 @@ export const DEFAULT_PRICING_CONFIG = {
   currency: "USD",
   taxRate: 0.10,                // 10% tax
   airportFee: 5,                // flat fee if you want to apply based on pickup/dropoff
-  freeWaitMinutes: 10,          // first 10 minutes free
+  freeWaitMinutes: 30,          // first 30 minutes free
   waitPerMinute: 1.00,          // after free minutes
 
   /** Demand / pickup time multipliers by hour of day (0–23). Missing hours default to 1.0
@@ -31,8 +30,8 @@ export const DEFAULT_PRICING_CONFIG = {
   vehicles: {
     [VehicleType.SEDAN]: {
       displayName: "Luxury Sedan",
-      baseFare: 15,
-      minFare: 45,
+      baseFare: 10,
+      minFare: 40,
       perMile: 3.25,
       perMinute: 0.70,
       includedMiles: 0,         // set to >0 if you include a mileage bundle
@@ -40,8 +39,8 @@ export const DEFAULT_PRICING_CONFIG = {
     },
     [VehicleType.SUV]: {
       displayName: "Premium SUV",
-      baseFare: 20,
-      minFare: 65,
+      baseFare: 25,
+      minFare: 45,
       perMile: 4.10,
       perMinute: 0.85,
       includedMiles: 0,

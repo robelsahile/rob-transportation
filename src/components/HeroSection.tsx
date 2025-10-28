@@ -78,15 +78,15 @@ const HeroSection: React.FC = () => {
                 {/* Quick Stats */}
                 <div className="hero-stats">
                   <div className="hero-stat">
-                    <div className="hero-stat-number">3</div>
+                    <div className="hero-stat-number">Multiple</div>
                     <div className="hero-stat-label">Vehicle Types</div>
                   </div>
                   <div className="hero-stat">
-                    <div className="hero-stat-number">$45</div>
-                    <div className="hero-stat-label">Starting Price</div>
+                    <div className="hero-stat-number">Affordable</div>
+                    <div className="hero-stat-label">Price</div>
                   </div>
                   <div className="hero-stat">
-                    <div className="hero-stat-number">10min</div>
+                    <div className="hero-stat-number">30min</div>
                     <div className="hero-stat-label">Free Wait</div>
                   </div>
                 </div>
